@@ -139,12 +139,24 @@ class Comment extends BaseController
             $result[] = $item;
         }
 
+        $me = null;
+        if ($this->is_logged && isset($this->user_info->id)) {
+            $me = [
+                'id'       => (int) $this->user_info->id,
+                'username' => $this->user_info->username,
+                'role'     => $this->user_info->role ?? 'user',
+                'avatar'   => (!empty($this->user_info->avatar) && $this->user_info->avatar != '0')
+                    ? '/uploads/users/' . $this->user_info->id . '-thumb.jpg' : '',
+            ];
+        }
+
         return $this->response->setJSON([
             'status'   => 'ok',
             'comments' => $result,
             'total'    => $total,
             'page'     => $page,
             'pages'    => (int) ceil($total / $perPage),
+            'me'       => $me,
         ]);
     }
 

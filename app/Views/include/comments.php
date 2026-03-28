@@ -114,29 +114,8 @@ a.cmt-chapter-badge:hover{background:rgba(110,231,183,0.25);color:#a0f0d0;}
     </div>
   </div>
 
-  <!-- Post form -->
-  <?php if (isset($is_logged) && $is_logged): ?>
-  <div class="cmt-form">
-    <div class="cmt-form-avatar">
-      <?php if (!empty($user_info->avatar) && $user_info->avatar != '0'): ?>
-        <img src="/uploads/users/<?= $user_info->id ?>-thumb.jpg" alt="">
-      <?php else: ?>
-        <i class="fa fa-user"></i>
-      <?php endif; ?>
-    </div>
-    <div class="cmt-form-body">
-      <textarea id="cmtInput_<?= $cmtInst ?>" placeholder="Write your message" maxlength="2000"></textarea>
-      <div class="cmt-error" id="cmtError_<?= $cmtInst ?>"></div>
-      <div class="cmt-form-actions">
-        <button class="cmt-btn cmt-btn-primary" onclick="CMT['<?= $cmtInst ?>'].post()" id="cmtBtn_<?= $cmtInst ?>">Comment</button>
-      </div>
-    </div>
-  </div>
-  <?php else: ?>
-  <div class="cmt-login-msg">
-    <a href="/login">Login</a> to leave a comment.
-  </div>
-  <?php endif; ?>
+  <!-- Post form - loaded via AJAX to avoid CF cache issues -->
+  <div id="cmtFormWrap_<?= $cmtInst ?>"></div>
 
   <!-- Comments list -->
   <ul class="cmt-list" id="cmtList_<?= $cmtInst ?>"></ul>
@@ -156,9 +135,10 @@ if(typeof CMT==='undefined') window.CMT={};
   var currentPage = 0;
   var totalPages = 1;
   var currentSort = 'newest';
-  var currentUserId = <?= (isset($user_info) && $user_info) ? (int)$user_info->id : 0 ?>;
-  var isAdmin = <?= (isset($user_info) && $user_info && isset($user_info->role) && $user_info->role === 'admin') ? 'true' : 'false' ?>;
-  var userInitial = currentUserId ? '<?= isset($user_info) && $user_info ? strtoupper(substr($user_info->username, 0, 1)) : "?" ?>' : '?';
+  var currentUserId = 0;
+  var isAdmin = false;
+  var userInitial = '?';
+  var userAvatar = '';
 
   function $(id){ return document.getElementById(id); }
 
@@ -196,6 +176,14 @@ if(typeof CMT==='undefined') window.CMT={};
       .then(function(r){return r.json()})
       .then(function(d){
         if(d.status!=='ok') return;
+        // Get user info from first load
+        if(d.me && !currentUserId){
+          currentUserId = d.me.id;
+          isAdmin = d.me.role === 'admin';
+          userInitial = (d.me.username||'?').charAt(0).toUpperCase();
+          userAvatar = d.me.avatar || '';
+          loadCommentForm();
+        }
         totalPages = d.pages;
         $('cmtCount_'+inst).textContent = d.total+' comment'+(d.total!==1?'s':'');
         if(!d.comments.length && currentPage===1){
@@ -444,7 +432,27 @@ if(typeof CMT==='undefined') window.CMT={};
     if(toggleBtn) toggleBtn.innerHTML = '<i class="fa fa-caret-up"></i> Hide replies ('+total+')';
   }
 
+  // Render comment form based on cookie (bypass CF cache)
+  function loadCommentForm(){
+    var wrap = $('cmtFormWrap_'+inst);
+    if(!wrap) return;
+    if(document.cookie.indexOf('is_logged=1') !== -1){
+      var avatarHtml = userAvatar ? '<img src="'+userAvatar+'" alt="">' : '<i class="fa fa-user"></i>';
+      wrap.innerHTML = '<div class="cmt-form">'
+        +'<div class="cmt-form-avatar">'+avatarHtml+'</div>'
+        +'<div class="cmt-form-body">'
+        +'<textarea id="cmtInput_'+inst+'" placeholder="Write your message" maxlength="2000"></textarea>'
+        +'<div class="cmt-error" id="cmtError_'+inst+'"></div>'
+        +'<div class="cmt-form-actions">'
+        +'<button class="cmt-btn cmt-btn-primary" onclick="CMT[\''+inst+'\'].post()" id="cmtBtn_'+inst+'">Comment</button>'
+        +'</div></div></div>';
+    } else {
+      wrap.innerHTML = '<div class="cmt-login-msg"><a href="/login">Login</a> to leave a comment.</div>';
+    }
+  }
+
   CMT[inst] = api;
+  loadCommentForm();
   api.load();
 })();
 </script>
