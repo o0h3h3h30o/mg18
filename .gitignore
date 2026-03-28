@@ -131,3 +131,4 @@ _modules/*
 #-------------------------
 /public/manga/
 /public/uploads/
+app/Views/include/header.php
