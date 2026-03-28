@@ -451,8 +451,15 @@ if(typeof CMT==='undefined') window.CMT={};
     }
   }
 
+  api.refresh = function(){
+    currentPage = 0;
+    $('cmtList_'+inst).innerHTML = '';
+    api.load();
+  };
+
   CMT[inst] = api;
   loadCommentForm();
   api.load();
+  setInterval(function(){ api.refresh(); }, 30000);
 })();
 </script>
