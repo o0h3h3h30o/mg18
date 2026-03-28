@@ -11,8 +11,7 @@ class Manga extends BaseController
         }
 
         $data = $this->getCommonData();
-        // $data['ads'] = $this->isVip() ? [] : $this->getAds(3);
-        // $data['vip'] = $this->isVip() ? 1 : 0;
+        $data['ads'] = $this->getAds(3);
 
         $manga_info = $this->db->table('manga')->where('slug', $slug)->get()->getRow();
 
