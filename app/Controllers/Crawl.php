@@ -372,7 +372,7 @@ class Crawl extends \CodeIgniter\Controller
             $label = strtolower(trim($heading->text()));
             $content = $item->find('.summary-content', 0);
             if (!$content) continue;
-            $val = trim($content->text());
+            $val = trim(preg_replace('/\s+/', ' ', $content->text()));
 
             if (str_contains($label, 'alternative')) {
                 $data['otherNames'] = $val;
@@ -380,10 +380,10 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         $author = $dom->find('.author-content', 0);
-        if ($author) $data['author'] = trim($author->text());
+        if ($author) $data['author'] = trim(preg_replace('/\s+/', ' ', $author->text()));
 
         $artist = $dom->find('.artist-content', 0);
-        if ($artist) $data['artist'] = trim($artist->text());
+        if ($artist) $data['artist'] = trim(preg_replace('/\s+/', ' ', $artist->text()));
 
         $genres = $dom->find('.genres-content', 0);
         if ($genres) {
@@ -391,7 +391,7 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         $summary = $dom->find('.summary__content', 0);
-        if ($summary) $data['summary'] = trim($summary->innerHtml());
+        if ($summary) $data['summary'] = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($summary->innerHtml()))));
 
         $img = $dom->find('.summary_image img', 0);
         if ($img) {
@@ -908,7 +908,7 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         $summaryEl = $dom->find('.dsct', 0);
-        if ($summaryEl) $data['summary'] = trim(strip_tags($summaryEl->plaintext));
+        if ($summaryEl) $data['summary'] = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($summaryEl->plaintext))));
 
         $imgEl = $dom->find('.summary_image img', 0);
         if ($imgEl) {
@@ -1017,7 +1017,7 @@ class Crawl extends \CodeIgniter\Controller
             'updated_at'  => date('Y-m-d H:i:s'),
             'view'        => 0,
             'is_show'     => 0,
-            'is_crawling' => 2, // Need crawl
+            'is_crawling' => 0,
             'source_url'  => $url,
         ]);
 
