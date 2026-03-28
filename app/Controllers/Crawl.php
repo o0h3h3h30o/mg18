@@ -34,6 +34,9 @@ class Crawl extends BaseController
         ini_set('memory_limit', '-1');
         ini_set('max_execution_time', '0');
 
+        $dryRun = is_cli() ? in_array('--dry', $_SERVER['argv'] ?? []) : ($this->request->getGet('dry') == '1');
+        if ($dryRun) echo "=== DRY RUN MODE (no insert) ===\n\n";
+
         for ($paged = 1; $paged <= 2; $paged++) {
             echo "-------- TRANG {$paged} --------\n";
 
@@ -43,14 +46,107 @@ class Crawl extends BaseController
                 $sourceUrl = 'https://manga18fx.com' . $item['source'];
                 $existingManga = $this->findMangaByLink($sourceUrl);
 
-                if (!$existingManga) {
-                    $this->crawlNewManga($item, $sourceUrl, $paged);
+                if ($dryRun) {
+                    $this->dryRunManga($item, $sourceUrl, $existingManga);
                 } else {
-                    $this->crawlNewChaptersForManga($existingManga, $item, $paged);
+                    if (!$existingManga) {
+                        $this->crawlNewManga($item, $sourceUrl, $paged);
+                    } else {
+                        $this->crawlNewChaptersForManga($existingManga, $item, $paged);
+                    }
                 }
             }
         }
         echo "\nDone.\n";
+    }
+
+    /**
+     * Dry run - list manga + chapters without inserting
+     */
+    private function dryRunManga(array $item, string $sourceUrl, ?object $existingManga): void
+    {
+        $is18 = $item['is_18'] ?? 0;
+        $title = $item['title'] ?? 'Unknown';
+
+        if ($existingManga) {
+            // Existing manga — check for new chapters
+            if (!$existingManga->is_public) {
+                echo "[SKIP - not public] {$existingManga->name}\n";
+                return;
+            }
+
+            $lastChapter = $item['last_chapter'] ?? '';
+            $chapNumber = $this->extractChapterNumber($lastChapter);
+            $currentMax = floatval($existingManga->chapter_1);
+
+            if ($chapNumber <= $currentMax) {
+                echo "[UP TO DATE] {$existingManga->name} (current: {$currentMax}, latest: {$chapNumber})\n";
+                return;
+            }
+
+            // Fetch chapter list to find new ones
+            $html = $this->fetchUrl($sourceUrl, 'https://manga18fx.com');
+            if (!$html) {
+                echo "[FETCH FAIL] {$existingManga->name}\n";
+                return;
+            }
+            $dom = HtmlDomParser::str_get_html($html);
+            $chapters = $this->parseChapterList($dom);
+
+            $newChapters = [];
+            foreach ($chapters as $chUrl) {
+                $num = $this->extractChapterNumber($chUrl);
+                if ($num <= 0) continue;
+                $exists = $this->db->table('chapter')
+                    ->where('number', $num)
+                    ->where('manga_id', $existingManga->id)
+                    ->countAllResults();
+                if ($exists == 0) {
+                    $newChapters[] = "Ch.{$num} ({$chUrl})";
+                }
+            }
+
+            if (empty($newChapters)) {
+                echo "[NO NEW] {$existingManga->name}\n";
+            } else {
+                echo "[NEW CHAPTERS] {$existingManga->name} — " . count($newChapters) . " chapters:\n";
+                foreach ($newChapters as $ch) {
+                    echo "  + {$ch}\n";
+                }
+            }
+        } else {
+            // New manga
+            if (!$is18) {
+                echo "[SKIP non-18+] {$title}\n";
+                return;
+            }
+
+            $html = $this->fetchUrl($sourceUrl, 'https://manga18fx.com');
+            if (!$html) {
+                echo "[FETCH FAIL] {$title}\n";
+                return;
+            }
+            $dom = HtmlDomParser::str_get_html($html);
+            $data = $this->parseMangaPage($dom);
+            $chapters = $this->parseChapterList($dom);
+
+            // Check by name too
+            $existByName = $this->findMangaByName($data['name']);
+            if ($existByName) {
+                echo "[EXISTS BY NAME] {$data['name']} (id: {$existByName->id})\n";
+                return;
+            }
+
+            echo "[NEW MANGA] {$data['name']}\n";
+            echo "  Source: {$sourceUrl}\n";
+            echo "  Author: {$data['author']} | Artist: {$data['artist']}\n";
+            echo "  Categories: " . implode(', ', $data['categories']) . "\n";
+            echo "  Chapters: " . count($chapters) . "\n";
+            foreach ($chapters as $chUrl) {
+                $num = $this->extractChapterNumber($chUrl);
+                echo "    Ch.{$num} ({$chUrl})\n";
+            }
+        }
     }
 
     /**
@@ -892,16 +988,18 @@ class Crawl extends BaseController
             'categories'  => [],
         ];
 
+        $clean = fn($s) => trim(preg_replace('/\s+/', ' ', strip_tags($s)));
+
         $titleEl = $dom->find('.post-title h1', 0);
-        if ($titleEl) $data['name'] = trim(strip_tags($titleEl->innertext));
+        if ($titleEl) $data['name'] = $clean($titleEl->innertext);
 
         $contentItems = $dom->find('.post-content_item .summary-content');
-        if (isset($contentItems[1])) $data['otherNames'] = trim(strip_tags($contentItems[1]->innertext));
-        if (isset($contentItems[2])) $data['author'] = trim(strip_tags($contentItems[2]->innertext));
-        if (isset($contentItems[3])) $data['artist'] = trim(strip_tags($contentItems[3]->innertext));
+        if (isset($contentItems[1])) $data['otherNames'] = $clean($contentItems[1]->innertext);
+        if (isset($contentItems[2])) $data['author'] = $clean($contentItems[2]->innertext);
+        if (isset($contentItems[3])) $data['artist'] = $clean($contentItems[3]->innertext);
         if (isset($contentItems[4])) {
-            $cats = trim(strip_tags($contentItems[4]->innertext));
-            $data['categories'] = array_filter(array_map('trim', explode('  ', $cats)));
+            $cats = $clean($contentItems[4]->innertext);
+            $data['categories'] = array_filter(array_map('trim', explode(',', $cats)));
         }
 
         $summaryEl = $dom->find('.dsct', 0);
