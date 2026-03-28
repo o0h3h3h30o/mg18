@@ -81,15 +81,10 @@
     <script>
       var _isLogged = document.cookie.indexOf('is_logged=1') !== -1;
     </script>
-    <?php if($is_logged==1): ?>
-    <!-- Server knows user is logged in (origin hit) — no flicker -->
-    <style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}</style>
-    <?php else: ?>
-    <!-- CF cache: rely on cookie to pre-hide guest nav, use visibility to keep layout stable -->
+    <!-- CF cache safe: only use JS cookie check to toggle nav -->
     <script>
-    if(_isLogged){document.write('<style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important;visibility:hidden}.user-nav-mb{display:block!important;visibility:hidden}</style>');}
+    if(_isLogged){document.write('<style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}</style>');}
     </script>
-    <?php endif; ?>
    </head>
    <body style="background: url('<?=base_url()?>bg.jpeg');">
 <?php 

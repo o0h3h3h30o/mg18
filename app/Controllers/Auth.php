@@ -22,8 +22,8 @@ class Auth extends BaseController
 
         $data = $this->getCommonData();
         $data['recaptcha_publickey'] = env('RECAPTCHA_SITE_KEY', '');
-        $data['message'] = session()->getFlashdata('message') ?? '';
-        $data['message_type'] = session()->getFlashdata('message_type') ?? '';
+        $data['message'] = session()->getFlashdata('message');
+        $data['message_type'] = session()->getFlashdata('message_type');
 
         return view('login', $data);
     }
@@ -36,8 +36,8 @@ class Auth extends BaseController
 
         $data = $this->getCommonData();
         $data['recaptcha_publickey'] = env('RECAPTCHA_SITE_KEY', '');
-        $data['message'] = session()->getFlashdata('message') ?? '';
-        $data['message_type'] = session()->getFlashdata('message_type') ?? '';
+        $data['message'] = session()->getFlashdata('message');
+        $data['message_type'] = session()->getFlashdata('message_type');
 
         return view('register', $data);
     }
