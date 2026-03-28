@@ -5,7 +5,7 @@
  */
 if (!isset($total_pages) || $total_pages <= 1) return;
 
-$range = 3;
+$range = 1;
 $start = max(1, $current_page - $range);
 $end = min($total_pages, $current_page + $range);
 ?>

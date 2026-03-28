@@ -10,7 +10,7 @@
 
 if (isset($pager)) {
     // CI4 Pager mode
-    $pager->setSurroundCount(3);
+    $pager->setSurroundCount(1);
 ?>
 <ul class="pagination">
     <?php if ($pager->hasPrevious()): ?>
