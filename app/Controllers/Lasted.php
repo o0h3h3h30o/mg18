@@ -6,6 +6,11 @@ class Lasted extends BaseController
 {
     public function index($page = null)
     {
+        $page = (int)($page ?? 1);
+        if ($page <= 1) {
+            return redirect()->to('/');
+        }
+
         $data = $this->getCommonData();
         $data['ads'] = $this->getAds(2);
 
