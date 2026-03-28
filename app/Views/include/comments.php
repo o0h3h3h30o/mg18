@@ -460,6 +460,5 @@ if(typeof CMT==='undefined') window.CMT={};
   CMT[inst] = api;
   loadCommentForm();
   api.load();
-  setInterval(function(){ api.refresh(); }, 30000);
 })();
 </script>
