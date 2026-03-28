@@ -129,7 +129,7 @@
             });
         }
         // Load user state from /api/me (works with CF cache)
-        if (_isLogged || <?= $is_logged ?? 0 ?>) {
+        if (_isLogged) {
             $.getJSON("/api/me", function(me) {
                 if (me.logged) {
                     // Fill username
