@@ -16,7 +16,7 @@ class CrawlCommand extends BaseCommand
     {
         $action = $params[0] ?? 'index';
 
-        // Build a fake request so controller can work
+        // Direct instantiation — Crawl no longer extends BaseController
         $controller = new \App\Controllers\Crawl();
 
         switch ($action) {
