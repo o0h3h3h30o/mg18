@@ -14,11 +14,9 @@ $end = min($total_pages, $current_page + $range);
         <li><a href="<?= $base_url ?>1">&laquo;</a></li>
         <li><a href="<?= $base_url . ($current_page - 1) ?>">&lsaquo;</a></li>
     <?php endif; ?>
-    <?php if ($start > 1): ?><li><a href="<?= $base_url ?>1">1</a></li><li class="disabled"><span>...</span></li><?php endif; ?>
     <?php for ($i = $start; $i <= $end; $i++): ?>
         <li class="<?= $i == $current_page ? 'active' : '' ?>"><a href="<?= $base_url . $i ?>"><?= $i ?></a></li>
     <?php endfor; ?>
-    <?php if ($end < $total_pages): ?><li class="disabled"><span>...</span></li><li><a href="<?= $base_url . $total_pages ?>"><?= $total_pages ?></a></li><?php endif; ?>
     <?php if ($current_page < $total_pages): ?>
         <li><a href="<?= $base_url . ($current_page + 1) ?>">&rsaquo;</a></li>
         <li><a href="<?= $base_url . $total_pages ?>">&raquo;</a></li>
