@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <sitemap>
+        <loc>https://manga18.club/sitemap_manga.xml</loc>
+        <lastmod>2021-09-11T08:53:43+07:00</lastmod>
+    </sitemap>
+    <sitemap>
+        <loc>https://manga18.club/sitemap_chapter_0.xml</loc>
+        <lastmod>2021-09-11T08:53:43+07:00</lastmod>
+    </sitemap>
+    <sitemap>
+        <loc>https://manga18.club/sitemap_chapter_1.xml</loc>
+        <lastmod>2021-09-11T08:53:43+07:00</lastmod>
+    </sitemap>
+</sitemapindex>

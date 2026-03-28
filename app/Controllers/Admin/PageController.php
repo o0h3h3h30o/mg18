@@ -1,0 +1,321 @@
+<?php
+
+namespace App\Controllers\Admin;
+
+use App\Controllers\BaseController;
+
+class PageController extends BaseController
+{
+    public function index($chapterId)
+    {
+        $chapter = $this->db->table('chapter')->where('id', $chapterId)->get()->getRow();
+        if (!$chapter) return redirect()->to('/admin/manga');
+
+        $manga = $this->db->table('manga')->where('id', $chapter->manga_id)->get()->getRow();
+
+        $pages = $this->db->table('page')
+            ->where('chapter_id', $chapterId)
+            ->orderBy('slug', 'ASC')
+            ->get()->getResult();
+
+        return view('admin/page/index', [
+            'title'   => 'Pages - Chapter ' . ($chapter->number ?? $chapter->name),
+            'chapter' => $chapter,
+            'manga'   => $manga,
+            'pages'   => $pages,
+        ]);
+    }
+
+    /**
+     * AJAX upload single image (local storage)
+     */
+    public function upload($chapterId)
+    {
+        $chapter = $this->db->table('chapter')->where('id', $chapterId)->get()->getRow();
+        if (!$chapter) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Chapter not found']);
+        }
+
+        $manga = $this->db->table('manga')->where('id', $chapter->manga_id)->get()->getRow();
+
+        $file = $this->request->getFile('image');
+        if (!$file || !$file->isValid() || $file->hasMoved()) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'No valid image uploaded.']);
+        }
+
+        $slug = trim($this->request->getPost('slug')) ?: $this->getNextSlug($chapterId);
+
+        $uploadDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $chapter->slug;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $ext = $file->getExtension();
+        $filename = $slug . '.' . $ext;
+        $file->move($uploadDir, $filename);
+
+        $this->db->table('page')->insert([
+            'chapter_id' => $chapterId,
+            'slug'       => $slug,
+            'image'      => $filename,
+            'external'   => 0,
+        ]);
+
+        $pageId = $this->db->insertID();
+        $imgUrl = config('Manga')->cdnUrl . '/manga/' . $manga->slug . '/chapters/' . $chapter->slug . '/' . $filename;
+
+        return $this->response->setJSON([
+            'status'  => 1,
+            'msg'     => 'Uploaded',
+            'page_id' => $pageId,
+            'slug'    => $slug,
+            'image'   => $filename,
+            'img_url' => $imgUrl,
+        ]);
+    }
+
+    /**
+     * Upload ZIP file, extract images (local storage)
+     */
+    public function uploadZip($chapterId)
+    {
+        $chapter = $this->db->table('chapter')->where('id', $chapterId)->get()->getRow();
+        if (!$chapter) return redirect()->to('/admin/manga');
+
+        $manga = $this->db->table('manga')->where('id', $chapter->manga_id)->get()->getRow();
+
+        $file = $this->request->getFile('zipfile');
+        if (!$file || !$file->isValid() || $file->hasMoved()) {
+            return redirect()->back()->with('error', 'No valid ZIP file uploaded.');
+        }
+
+        // Extract to temp dir
+        $tmpDir = WRITEPATH . 'tmp/zip_' . time() . '_' . mt_rand(1000, 9999);
+        mkdir($tmpDir, 0755, true);
+        $zipPath = $tmpDir . '/upload.zip';
+        $file->move($tmpDir, 'upload.zip');
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            $this->cleanDir($tmpDir);
+            return redirect()->back()->with('error', 'Failed to open ZIP file.');
+        }
+        $zip->extractTo($tmpDir . '/extracted');
+        $zip->close();
+
+        // Find all image files recursively
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        $images = [];
+        $this->findImages($tmpDir . '/extracted', $allowedExts, $images);
+        sort($images); // Sort by filename
+
+        if (empty($images)) {
+            $this->cleanDir($tmpDir);
+            return redirect()->back()->with('error', 'No images found in ZIP file.');
+        }
+
+        // Destination directory
+        $uploadDir = FCPATH . 'manga/' . $manga->slug . '/chapters/' . $chapter->slug;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $nextSlug = $this->getNextSlug($chapterId);
+        $batch = [];
+        foreach ($images as $imgPath) {
+            $ext = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
+            $filename = $nextSlug . '.' . $ext;
+
+            copy($imgPath, $uploadDir . '/' . $filename);
+
+            $batch[] = [
+                'chapter_id' => $chapterId,
+                'slug'       => (string) $nextSlug,
+                'image'      => $filename,
+                'external'   => 0,
+            ];
+            $nextSlug++;
+        }
+
+        if ($batch) {
+            $this->db->table('page')->insertBatch($batch);
+        }
+
+        // Cleanup temp
+        $this->cleanDir($tmpDir);
+
+        return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('success', count($batch) . ' images extracted and uploaded from ZIP.');
+    }
+
+    /**
+     * Bulk URL paste (external storage)
+     */
+    public function uploadBulk($chapterId)
+    {
+        $chapter = $this->db->table('chapter')->where('id', $chapterId)->get()->getRow();
+        if (!$chapter) return redirect()->to('/admin/manga');
+
+        $urls = trim($this->request->getPost('urls'));
+        if (!$urls) {
+            return redirect()->back()->with('error', 'No URLs provided.');
+        }
+
+        $lines = array_filter(array_map('trim', explode("\n", $urls)));
+        if (empty($lines)) {
+            return redirect()->back()->with('error', 'No valid URLs found.');
+        }
+
+        $nextSlug = $this->getNextSlug($chapterId);
+        $batch = [];
+        foreach ($lines as $url) {
+            if (!filter_var($url, FILTER_VALIDATE_URL)) continue;
+            $batch[] = [
+                'chapter_id' => $chapterId,
+                'slug'       => (string) $nextSlug,
+                'image'      => $url,
+                'external'   => 1,
+            ];
+            $nextSlug++;
+        }
+
+        if (empty($batch)) {
+            return redirect()->back()->with('error', 'No valid URLs found.');
+        }
+
+        $this->db->table('page')->insertBatch($batch);
+
+        return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('success', count($batch) . ' external image URLs added.');
+    }
+
+    /**
+     * Get next slug number for pages in a chapter
+     */
+    private function getNextSlug($chapterId): int
+    {
+        $max = $this->db->table('page')
+            ->selectMax('CAST(slug AS UNSIGNED)', 'max_slug')
+            ->where('chapter_id', $chapterId)
+            ->get()->getRow();
+        return ($max && $max->max_slug) ? (int)$max->max_slug + 1 : 1;
+    }
+
+    /**
+     * Recursively find image files
+     */
+    private function findImages(string $dir, array $exts, array &$results)
+    {
+        if (!is_dir($dir)) return;
+        $files = scandir($dir);
+        foreach ($files as $f) {
+            if ($f === '.' || $f === '..') continue;
+            $path = $dir . '/' . $f;
+            if (is_dir($path)) {
+                $this->findImages($path, $exts, $results);
+            } else {
+                $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
+                if (in_array($ext, $exts)) {
+                    $results[] = $path;
+                }
+            }
+        }
+    }
+
+    /**
+     * Recursively remove directory
+     */
+    private function cleanDir(string $dir)
+    {
+        if (!is_dir($dir)) return;
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($items as $item) {
+            $item->isDir() ? rmdir($item->getRealPath()) : unlink($item->getRealPath());
+        }
+        rmdir($dir);
+    }
+
+    public function edit($id)
+    {
+        $page = $this->db->table('page')->where('id', $id)->get()->getRow();
+        if (!$page) return redirect()->to('/admin/manga');
+
+        $chapter = $this->db->table('chapter')->where('id', $page->chapter_id)->get()->getRow();
+        $manga = $this->db->table('manga')->where('id', $chapter->manga_id)->get()->getRow();
+
+        $allPages = $this->db->table('page')
+            ->where('chapter_id', $page->chapter_id)
+            ->orderBy('slug', 'ASC')
+            ->get()->getResult();
+
+        return view('admin/page/form', [
+            'title'    => 'Edit Page',
+            'item'     => $page,
+            'chapter'  => $chapter,
+            'manga'    => $manga,
+            'allPages' => $allPages,
+        ]);
+    }
+
+    public function update($id)
+    {
+        $page = $this->db->table('page')->where('id', $id)->get()->getRow();
+        if (!$page) return redirect()->to('/admin/manga');
+
+        if (!$this->validate([
+            'slug'  => 'required|max_length[500]',
+            'image' => 'required|max_length[1000]',
+        ])) {
+            return redirect()->back()->withInput()->with('error', implode('<br>', $this->validator->getErrors()));
+        }
+        $this->db->table('page')->where('id', $id)->update([
+            'slug'     => trim($this->request->getPost('slug')),
+            'image'    => trim($this->request->getPost('image')),
+            'external' => (int) $this->request->getPost('external'),
+        ]);
+
+        return redirect()->to('/admin/pages/' . $page->chapter_id)->with('success', 'Page updated.');
+    }
+
+    public function delete($id)
+    {
+        $page = $this->db->table('page')->where('id', $id)->get()->getRow();
+        if (!$page) return redirect()->to('/admin/manga');
+
+        $chapterId = $page->chapter_id;
+        $this->db->table('page')->where('id', $id)->delete();
+
+        // Redirect back to chapter edit if came from there
+        $referer = $this->request->getHeaderLine('Referer');
+        if (strpos($referer, '/admin/chapters/edit/') !== false) {
+            return redirect()->to($referer)->with('success', 'Page deleted.');
+        }
+        return redirect()->to('/admin/pages/' . $chapterId)->with('success', 'Page deleted.');
+    }
+
+    public function deleteAll($chapterId)
+    {
+        $chapter = $this->db->table('chapter')->where('id', $chapterId)->get()->getRow();
+        if (!$chapter) return redirect()->to('/admin/manga');
+
+        $count = $this->db->table('page')->where('chapter_id', $chapterId)->countAllResults(false);
+        $this->db->table('page')->where('chapter_id', $chapterId)->delete();
+
+        return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('success', "All {$count} pages deleted.");
+    }
+
+    public function deleteBatch()
+    {
+        $pageIds = $this->request->getPost('page_ids');
+        $chapterId = $this->request->getPost('chapter_id');
+
+        if (!empty($pageIds) && is_array($pageIds)) {
+            $this->db->table('page')->whereIn('id', array_map('intval', $pageIds))->delete();
+            $count = count($pageIds);
+            return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('success', "{$count} pages deleted.");
+        }
+
+        return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('error', 'No pages selected.');
+    }
+}

@@ -1,0 +1,185 @@
+@media (min-width: 1200px) {
+  .container {
+    width: 1030px;
+  }
+  .header_search > input {
+    min-width: 400px;
+  }
+  .mg_item .mg_images img,
+  .story_item .story_images img {
+    height: 250px;
+  }
+  .mg_rank {
+    .mg_rank-content {
+      >.row {
+        margin:0 -7px;
+        .col-md-4 {
+          padding:0 7px;
+        }
+      }
+    }
+  }
+  .recoment_box {
+    >.row {
+      .col-md-3 {
+        &:nth-child(4n+1) {
+          clear:both;
+        }
+      }
+    }
+  }
+  .detail_story {
+    >.row {
+      margin: 0 -10px;
+      >.col-md-8 {
+        padding: 0 10px;
+        width: 70%;
+      }
+      >.col-md-4 {
+        padding: 0 10px;
+        width: 30%;
+      }
+    }
+  }
+}
+@media only screen and (max-width : 991px) {
+  .iedu_main .iedu_block__menu .iedu_block__right .banner_list {
+    margin-top:15px;
+  }
+  .chat_rank {
+    margin-bottom:20px!important;
+  }
+}
+@media (min-width: 768px) {
+  .story_item .story_images img {
+    height: 220px;
+  }
+  .story_all .story_item .story_images img {
+    height: 200px;
+  }
+  .chat_manga18 {
+    form {
+      >.row {
+        margin:0 -5px;
+        >.col-md-5, .col-sm-5,
+        .col-md-2, .col-sm-2 {
+          padding: 0 5px;
+        }
+      }
+    }
+  }
+}
+@media only screen and (min-width: 768px) and (max-width: 991px) {
+  .story_item .story_images img {
+    height: 250px;
+  }
+  .mg_rank {
+    .mg_rank-content {
+      >.row {
+        margin:0 -7px;
+        .col-sm-6 {
+          padding:0 7px;
+          .manga_box {
+            margin-bottom:15px;
+          }
+        }
+      }
+    }
+  }
+  .mg_recomment {
+    .mg_recomment-content {
+      >.row {
+        margin: 0 -7px;
+        .col-md-9, .col-md-3 {
+          padding: 0 7px;
+          .recomment_box {
+            >.row {
+              margin: 0 -7px;
+              .col-sm-3 {
+                padding: 0 7px;
+                &:nth-child(4n+1) {
+                  clear:both;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .recoment_box {
+    >.row {
+      .col-sm-3 {
+        &:nth-child(4n+1) {
+          clear:both;
+        }
+      }
+    }
+  }
+}
+@media only screen and (min-width: 320px) and (max-width: 767px) {
+  .story_item .story_images img {
+    height: 200px;
+  }
+  .mg_recomment {
+    .mg_recomment-content {
+      >.row {
+        margin: 0 -7px;
+        .col-md-9, .col-md-3 {
+          padding: 0 7px;
+          .recomment_box {
+            >.row {
+              .col-xs-6 {
+                &:nth-child(2n+1) {
+                  clear:both;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .mg_rank .rank_title {
+    flex-direction: column;
+    align-items: flex-start;
+    .rank_option {
+      margin-top:15px;
+    }
+  }
+  .detail_infomation {
+    margin-top:15px;
+  }
+  .detail_chapterMenu {
+    .section_button {
+      >button {
+        min-width: unset;
+      }
+    }
+  }
+  .chapter_detail .chapter_detailContent .chapter_detailBox .chapter_detailHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .user_left {
+    margin-bottom:15px;
+  }
+
+  /*Edit 28/12/2020*/
+  .detail_story .detail_avatar img {
+    width: 50%;
+    margin:auto;
+    object-fit: contain;
+  }
+  .recoment_box {
+    >.row {
+      .col-xs-6 {
+        &:nth-child(2n+1) {
+          clear:both;
+        }
+      }
+    }
+  }
+}
+
+

@@ -1,0 +1,20 @@
+# Block all PHP execution in uploads
+<FilesMatch "\.(?:php|phtml|php3|php4|php5|php7|phps|phar)$">
+    Require all denied
+</FilesMatch>
+
+# Only allow image files
+<FilesMatch "\.(?:jpg|jpeg|png|gif|webp)$">
+    Require all granted
+</FilesMatch>
+
+# Disable PHP engine entirely
+php_flag engine off
+
+# No directory listing
+Options -Indexes
+
+# Force image content type (prevent browser executing as script)
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/webp .webp
