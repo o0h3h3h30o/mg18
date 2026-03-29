@@ -344,18 +344,6 @@ function renderBookmarkBtn(isBookmarked) {
 
 $(document).ready(function(){
 
-    // Hydrate from API (bypass CF cache)
-    $.getJSON('/api/manga-state/' + _mangaId, function(d) {
-        if (d.status != 1) return;
-        // Update rating
-        $('#mgRatingText').text(d.avg + '/5');
-        $('#mgVoteCount').text(d.total_rate);
-        updateStars(parseFloat(d.avg));
-        // Update bookmark
-        $('#mgBookmarkCount').text(d.total_bookmarks);
-        renderBookmarkBtn(d.is_bookmarked);
-    });
-
     // Rate
     $(document).on('click', '.rate1', function(){
         var score = $(this).val();
@@ -365,14 +353,7 @@ $(document).ready(function(){
             data: { manga_id: _mangaId, score: score },
             success: function(result) {
                 if (result == 1) {
-                    // Reload state from API
-                    $.getJSON('/api/manga-state/' + _mangaId, function(d) {
-                        if (d.status == 1) {
-                            $('#mgRatingText').text(d.avg + '/5');
-                            $('#mgVoteCount').text(d.total_rate);
-                            updateStars(parseFloat(d.avg));
-                        }
-                    });
+                    location.reload();
                 } else {
                     alert('Please login');
                 }

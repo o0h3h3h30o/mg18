@@ -52,8 +52,6 @@ $routes->post('changePass', 'User::updatePassword');
 $routes->post('apiAddChapter', 'Manga::apiAddChapter');
 $routes->get('search', 'Home::search');
 $routes->get('apisearch', 'Home::search2');
-$routes->get('api/me', 'Home::me');
-$routes->get('api/manga-state/(:num)', 'Manga::mangaState/$1');
 $routes->post('api/track-view', 'Manga::trackView');
 $routes->get('notifications', 'Home::getNotification');
 $routes->post('notifications/read', 'Home::markNotificationsRead');
@@ -80,9 +78,9 @@ $routes->get('sitemap-chapter-(:num).xml', 'Sitemap::chapter/$1');
 
 // Crawl
 $routes->get('crawl', 'Crawl::index');
-$routes->get('crawl/crawlChapter', 'Crawl::crawlChapter');
-$routes->get('crawl/crawlChapter2', 'Crawl::crawlChapter2');
-$routes->get('crawl/mangadistrict', 'Crawl::mangadistrict');
+$routes->get('crawlChapter', 'Crawl::crawlChapter');
+$routes->get('crawlChapter2', 'Crawl::crawlChapter2');
+$routes->get('mangadistrict', 'Crawl::mangadistrict');
 
 // CLI crawl routes
 $routes->cli('crawl/index', 'Crawl::index');

@@ -418,14 +418,7 @@
             $('#mgBookmarkWrap').html(html);
         }
 
-        // Hydrate bookmark state from API
-        $.getJSON('/api/manga-state/' + _mangaId, function(d) {
-            if (d.status == 1) {
-                renderBookmarkBtn(d.is_bookmarked);
-            }
-        });
-
-        // Track view count (CF-cache compatible)
+        // Track view count
         $.ajax({
             type: 'POST',
             url: '/api/track-view',

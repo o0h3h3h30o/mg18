@@ -77,8 +77,6 @@ class Filters extends BaseFilters
                 'apiAddChapter',
                 'search',
                 'apisearch',
-                'api/me',
-                'api/manga-state/*',
                 'api/track-view',
                 'notifications',
                 'notifications/*',
