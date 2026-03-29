@@ -436,7 +436,7 @@ if(typeof CMT==='undefined') window.CMT={};
   function loadCommentForm(){
     var wrap = $('cmtFormWrap_'+inst);
     if(!wrap) return;
-    if(document.cookie.indexOf('is_logged=1') !== -1){
+    if(<?= $is_logged ? 'true' : 'false' ?>){
       var avatarHtml = userAvatar ? '<img src="'+userAvatar+'" alt="">' : '<i class="fa fa-user"></i>';
       wrap.innerHTML = '<div class="cmt-form">'
         +'<div class="cmt-form-avatar">'+avatarHtml+'</div>'

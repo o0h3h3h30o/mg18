@@ -78,13 +78,9 @@
       <!--Begin tag--->
 
 <!--End tag-->
-    <script>
-      var _isLogged = document.cookie.indexOf('is_logged=1') !== -1;
-    </script>
-    <!-- CF cache safe: only use JS cookie check to toggle nav -->
-    <script>
-    if(_isLogged){document.write('<style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}</style>');}
-    </script>
+    <?php if($is_logged): ?>
+    <style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}</style>
+    <?php endif; ?>
    </head>
    <body style="background: url('<?=base_url()?>bg.jpeg');">
 
@@ -341,7 +337,7 @@
                         </li>
                         <li class="user-nav">
                            <div class="user_login">
-                              <div class="user_name"><i class="lnr lnr-user"></i> <span id="hdr-username"></span></div>
+                              <div class="user_name"><i class="lnr lnr-user"></i> <?= $user_info->username ?? 'User' ?></div>
                            </div>
                            <div class="header_list header_loginBox">
                               <ul>
@@ -480,7 +476,7 @@
                <!-- Logged in (hidden by default, shown by CSS/JS) -->
                <div class="user-block user-nav-mb">
                   <div class="guest-option">
-                     <div class="user_name">Hello <span class="hdr-username-mb"></span><br><br></div>
+                     <div class="user_name">Hello <?= $user_info->username ?? 'User' ?><br><br></div>
                       <a href="/profile">Profile</a>
                       <a href="/bookmarks">Bookmark</a>
                       <a href="/history">History</a>

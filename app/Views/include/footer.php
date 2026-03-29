@@ -128,56 +128,34 @@
                 }, 700);
             });
         }
-        // Load user state from /api/me (works with CF cache)
-        if (_isLogged) {
-            $.getJSON("/api/me", function(me) {
-                if (me.logged) {
-                    // Fill username
-                    $('#hdr-username').text(me.username);
-                    $('.hdr-username-mb').text(me.username);
-                    // Make visible (handles both CF-cache visibility:hidden and origin)
-                    $('.user-nav, .user-nav-mb').css('visibility','visible').show();
-                    $('.guest-nav, .guest-nav-mb').hide();
-
-                    // Notification badge (desktop + mobile)
-                    if (me.notif_count > 0) {
-                        $('.notify_count, .notify_count_mb').text(me.notif_count).show();
-                    }
-
-                    // Notification dropdown (load once, fill both desktop + mobile)
-                    $.getJSON("/notifications", function(data) {
-                        if (data.status == 1) {
-                            if (data.notifications.length === 0) {
-                                $('.notif-dropdown .notif-body ul').empty();
-                                $('.notif-dropdown .notif-empty').show();
-                            } else {
-                                var html = '';
-                                for (var k in data.notifications) {
-                                    var n = data.notifications[k];
-                                    var cls = n.is_read == 0 ? 'notif-unread' : '';
-                                    var icon = n.icon_class || 'ti-bell';
-                                    html += '<li class="' + cls + '"><a href="/notification/go/' + n.id + '">'
-                                        + '<span class="notif-icon"><i class="' + icon + '"></i></span>'
-                                        + '<span class="notif-info">'
-                                        + '<strong>' + n.title + '</strong>'
-                                        + (n.message ? '<br><small>' + n.message + '</small>' : '')
-                                        + '<br><span class="notif-time">' + n.time_ago + '</span>'
-                                        + '</span>'
-                                        + '</a></li>';
-                                }
-                                $('.notif-dropdown .notif-body ul').html(html);
-                                $('.notif-dropdown .notif-empty').hide();
-                            }
-                        }
-                    });
-                } else {
-                    // Session expired — show guest, clear cookie
-                    $('.user-nav, .user-nav-mb').hide();
-                    $('.guest-nav, .guest-nav-mb').show();
-                    document.cookie = 'is_logged=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+        // Load notifications (server-rendered, no API needed for user state)
+        <?php if($is_logged): ?>
+        $.getJSON("/notifications", function(data) {
+            if (data.status == 1 && data.notifications.length > 0) {
+                var html = '';
+                var unread = 0;
+                for (var k in data.notifications) {
+                    var n = data.notifications[k];
+                    var cls = n.is_read == 0 ? 'notif-unread' : '';
+                    if (n.is_read == 0) unread++;
+                    var icon = n.icon_class || 'ti-bell';
+                    html += '<li class="' + cls + '"><a href="/notification/go/' + n.id + '">'
+                        + '<span class="notif-icon"><i class="' + icon + '"></i></span>'
+                        + '<span class="notif-info">'
+                        + '<strong>' + n.title + '</strong>'
+                        + (n.message ? '<br><small>' + n.message + '</small>' : '')
+                        + '<br><span class="notif-time">' + n.time_ago + '</span>'
+                        + '</span>'
+                        + '</a></li>';
                 }
-            });
-        }
+                $('.notif-dropdown .notif-body ul').html(html);
+                $('.notif-dropdown .notif-empty').hide();
+                if (unread > 0) {
+                    $('.notify_count, .notify_count_mb').text(unread).show();
+                }
+            }
+        });
+        <?php endif; ?>
 
         // Helper: mark all notifications as read
         function markAllNotifRead() {
