@@ -1014,7 +1014,7 @@ class Crawl extends \CodeIgniter\Controller
         foreach ($items as $item) {
             $manga = ['is_18' => 0, 'source' => '', 'title' => '', 'last_chapter' => ''];
 
-            if ($item->find('.adult-badges')) {
+            if (count($item->find('.adult-badges')) > 0) {
                 $manga['is_18'] = 1;
             }
 
