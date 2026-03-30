@@ -128,19 +128,7 @@
               </div>
               
               <div class="chapter_boxImages" id="chapter_boxImages">
-                <?php
-                  $rand = 1;
-                  // $rand = rand(1,2);
-                ?>
-                
-                             
-                  
-                
-                
-              
-             
-              
-            </div>
+              </div>
              <div class="chapter_boxImages" style="margin-top: 0px;">
               <?php if($chapter_info->source_url==''){?>
                <img src="<?=base_url();?>1.jpg" style="width: 100%;max-width: 800px;"/> 
@@ -331,7 +319,7 @@
 <!-- End Main content -->
 <script type="text/javascript">
   var slides_page;
-  var slides_p_path = [<?php foreach ($allPages as $key => $value) { ?><?php if($value->external!=1){ ?><?php echo '"'.base64_encode('https://s'.$rand.'.manga18.club/manga/'.$manga_info->slug.'/chapters/'.$chapter_info->slug.'/'.$value->image).'",'; ?><?php }else{echo '"'.base64_encode($value->image).'",';}} ?>];  
+  var slides_p_path = [<?php foreach ($allPages as $key => $value) { ?><?php if($value->external!=1){ ?><?php echo '"'.base64_encode($cdnUrl.'/manga/'.$manga_info->slug.'/chapters/'.$chapter_info->slug.'/'.$value->image).'",'; ?><?php }else{echo '"'.base64_encode($value->image).'",';}} ?>];  
   $(document)['ready'](function() {
       var _0xb00c=["","\x6C\x65\x6E\x67\x74\x68","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x69\x6D\x61\x67\x65\x5F\x73\x74\x6F\x72\x79\x20\x69\x6D\x61\x67\x65\x43\x68\x61\x70\x22\x3E\x3C\x69\x6D\x67\x20\x73\x72\x63\x3D\x27","\x27\x20\x63\x6C\x61\x73\x73\x3D\x22\x69\x6D\x67\x2D\x72\x65\x73\x70\x6F\x6E\x73\x69\x76\x65\x20\x69\x6D\x61\x67\x65\x2D\x63\x68\x61\x70\x74\x65\x72\x22\x20\x2F\x3E\x3C\x2F\x64\x69\x76\x3E","\x69\x6E\x6E\x65\x72\x48\x54\x4D\x4C","\x63\x68\x61\x70\x74\x65\x72\x5F\x62\x6F\x78\x49\x6D\x61\x67\x65\x73","\x67\x65\x74\x45\x6C\x65\x6D\x65\x6E\x74\x42\x79\x49\x64"];str_story= _0xb00c[0];var timeout=5000/ slides_p_path[_0xb00c[1]];var _0x7668x1=0;var _0x7668x2=setInterval(function(){str_story+= _0xb00c[2]+ atob(slides_p_path[_0x7668x1])+ _0xb00c[3];document[_0xb00c[6]](_0xb00c[5])[_0xb00c[4]]= str_story;_0x7668x1++;if(_0x7668x1=== slides_p_path[_0xb00c[1]]){clearInterval(_0x7668x2)}},timeout)
   })

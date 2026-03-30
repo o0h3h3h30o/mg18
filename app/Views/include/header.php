@@ -79,7 +79,7 @@
 
 <!--End tag-->
     <?php if($is_logged): ?>
-    <style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}</style>
+    <style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}.bell-ico.user-nav-mb{display:inline-block!important}</style>
     <?php endif; ?>
    </head>
    <body style="background: url('<?=base_url()?>bg.jpeg');">
@@ -279,9 +279,6 @@
   /* Mobile bell icon */
   .top-header { display: flex; align-items: center; justify-content: space-between; }
   .bell-ico { display: none; }
-  @media(max-width:767px){
-    .bell-ico.user-nav-mb { display: inline-block; }
-  }
 </style>
 
 

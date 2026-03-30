@@ -40,13 +40,20 @@ class Crawl extends \CodeIgniter\Controller
             $mangaList = $this->getLatestManga("https://manga18fx.com/page/{$paged}");
             echo "Found " . count($mangaList) . " manga\n";
 
-            foreach ($mangaList as $item) {
+            foreach ($mangaList as $idx => $item) {
+                $num = $idx + 1;
                 $sourceUrl = 'https://manga18fx.com' . $item['source'];
                 $existingManga = $this->findMangaByLink($sourceUrl);
 
+                echo "\n[{$num}] {$item['title']}";
+                echo $item['is_18'] ? ' [18+]' : ' [--]';
+                echo " | Last: {$item['last_chapter']}\n";
+
                 if (!$existingManga) {
+                    echo "  => NEW manga\n";
                     $this->crawlNewManga($item, $sourceUrl, $paged);
                 } else {
+                    echo "  => EXISTS: #{$existingManga->id} {$existingManga->name} (ch1={$existingManga->chapter_1})\n";
                     $this->crawlNewChaptersForManga($existingManga, $item, $paged);
                 }
             }
@@ -146,8 +153,16 @@ class Crawl extends \CodeIgniter\Controller
                 ->where('external', 1)
                 ->get()->getResult();
 
+            // No external pages in DB yet — parse source_url to create them
+            if (empty($pages) && !empty($item->source_url)) {
+                echo "  No pages in DB, parsing source_url: {$item->source_url}\n";
+                $pages = $this->parseAndInsertExternalPages($item);
+            }
+
             if (empty($pages)) {
                 echo "Chapter {$item->id} has no external pages.\n";
+                // Mark done so it doesn't keep retrying
+                $this->db->table('chapter')->where('id', $item->id)->update(['is_crawling' => 0]);
                 continue;
             }
 
@@ -798,11 +813,16 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         $html = $this->fetchUrl($sourceUrl, 'https://manga18fx.com');
-        if (!$html) return;
+        if (!$html) {
+            echo "  FAIL: could not fetch manga page\n";
+            return;
+        }
 
         $dom = HtmlDomParser::str_get_html($html);
         $data = $this->parseMangaPage($dom);
         $chapters = $this->parseChapterList($dom);
+
+        echo "  Parsed: {$data['name']} | Chapters: " . count($chapters) . "\n";
 
         // Check if manga with same name exists
         $existByName = $this->findMangaByName($data['name']);
@@ -814,7 +834,7 @@ class Crawl extends \CodeIgniter\Controller
                 'summary'        => $data['summary'],
                 'is_public'      => $paged == 1 ? 1 : $existByName->is_public,
             ]);
-            echo "Updated link for: {$existByName->name}\n";
+            echo "  EXISTS by name: #{$existByName->id} - updated link\n";
             return;
         }
 
@@ -851,11 +871,14 @@ class Crawl extends \CodeIgniter\Controller
         $this->insertCategories($mangaId, $data['categories']);
 
         // Insert chapters
+        $inserted = 0;
         foreach ($chapters as $chUrl) {
-            $this->insertChapterFromUrl($mangaId, $chUrl);
+            if ($this->insertChapterFromUrl($mangaId, $chUrl)) {
+                $inserted++;
+            }
         }
 
-        echo "Created manga #{$mangaId} - {$data['name']}\n";
+        echo "  CREATED: manga #{$mangaId} - {$data['name']} ({$slug}) | {$inserted} chapters\n";
     }
 
     /**
@@ -863,16 +886,35 @@ class Crawl extends \CodeIgniter\Controller
      */
     private function crawlNewChaptersForManga(object $manga, array $item, int $paged): void
     {
-        if (!$manga->is_public) return;
+        if (!$manga->is_public) {
+            echo "  SKIP: not public\n";
+            return;
+        }
 
         $lastChapter = $item['last_chapter'] ?? '';
-        if (!$lastChapter) return;
+        if (!$lastChapter) {
+            echo "  SKIP: no last chapter info\n";
+            return;
+        }
 
         $chapNumber = $this->extractChapterNumber($lastChapter);
-        if ($chapNumber <= 0 || $chapNumber <= floatval($manga->chapter_1)) return;
+        if ($chapNumber <= 0) {
+            echo "  SKIP: can't parse chapter number from '{$lastChapter}'\n";
+            return;
+        }
+
+        if ($chapNumber <= floatval($manga->chapter_1)) {
+            echo "  UP TO DATE (source:{$chapNumber} <= db:{$manga->chapter_1})\n";
+            return;
+        }
+
+        echo "  NEW CHAPTERS: source has {$chapNumber}, db has {$manga->chapter_1}\n";
 
         $html = $this->fetchUrl('https://manga18fx.com' . $item['source'], 'https://manga18fx.com');
-        if (!$html) return;
+        if (!$html) {
+            echo "  FAIL: could not fetch manga page\n";
+            return;
+        }
 
         $dom = HtmlDomParser::str_get_html($html);
         $chapters = $this->parseChapterList($dom);
@@ -884,7 +926,9 @@ class Crawl extends \CodeIgniter\Controller
             }
         }
         if ($inserted > 0) {
-            echo "Added {$inserted} new chapters for: {$manga->name}\n";
+            echo "  Added {$inserted} new chapters for: {$manga->name}\n";
+        } else {
+            echo "  No new chapters to insert (all exist)\n";
         }
     }
 
@@ -1056,6 +1100,68 @@ class Crawl extends \CodeIgniter\Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Parse source_url of a chapter, insert pages as external=1, return pages
+     */
+    private function parseAndInsertExternalPages(object $chapter): array
+    {
+        $referer = 'https://manga18fx.com/';
+        if (str_contains($chapter->source_url, 'mangadistrict')) {
+            $referer = 'https://mangadistrict.com/';
+        }
+
+        $html = $this->fetchUrl($chapter->source_url, $referer);
+        if (!$html) {
+            echo "  Failed to fetch source_url.\n";
+            return [];
+        }
+
+        $dom = HtmlDomParser::str_get_html($html);
+
+        // manga18fx
+        $readContent = $dom->find('.read-content');
+        if (!isset($readContent[0])) {
+            // mangadistrict
+            $readContent = $dom->find('.reading-content');
+        }
+        if (!isset($readContent[0])) {
+            echo "  No read content found.\n";
+            return [];
+        }
+
+        $imgDoms = $readContent[0]->find('img');
+        $index = 1;
+        $pages = [];
+
+        foreach ($imgDoms as $imgDom) {
+            $src = trim($imgDom->getAttribute('data-src') ?: $imgDom->getAttribute('src') ?: '');
+            if (!$src || str_contains($src, 'loading') || str_contains($src, 'logo')) continue;
+
+            $this->db->table('page')->insert([
+                'slug'       => $index,
+                'image'      => $src,
+                'external'   => 1,
+                'chapter_id' => $chapter->id,
+                'manga_id'   => $chapter->manga_id,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $page = new \stdClass();
+            $page->id = $this->db->insertID();
+            $page->slug = $index;
+            $page->image = $src;
+            $page->external = 1;
+            $pages[] = $page;
+
+            echo "  Inserted external page {$index}: " . substr($src, 0, 60) . "\n";
+            $index++;
+        }
+
+        echo "  Total pages inserted: " . count($pages) . "\n";
+        return $pages;
     }
 
     /**
