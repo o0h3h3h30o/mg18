@@ -3,13 +3,13 @@
   <br>
    <div class="divads" style="text-align: center;">
       <?php if(isset($ads['TOP_LARGE'])){ ?>
-      <?=$ads['TOP_LARGE'] ?>
+<div class="ad-lazy"><template><?=$ads['TOP_LARGE'] ?></template></div>
       <?php } ?>
       <?php if(isset($ads['TOP_SQRE_1'])){ ?>
-      <?=$ads['TOP_SQRE_1'] ?>
+<div class="ad-lazy"><template><?=$ads['TOP_SQRE_1'] ?></template></div>
       <?php } ?>
       <?php if(isset($ads['TOP_SQRE_2'])){ ?>
-      <?=$ads['TOP_SQRE_2'] ?>
+<div class="ad-lazy"><template><?=$ads['TOP_SQRE_2'] ?></template></div>
       <?php } ?>
     </div>
   <div class="mg-main">
@@ -54,14 +54,14 @@
             <div class="col-md-8 col-sm-12 col-xs-12">
               <div class="divads" style="">
               <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
-              <?=$ads['BOTTOM_LARGE'] ?>
+<div class="ad-lazy"><template><?=$ads['BOTTOM_LARGE'] ?></template></div>
               <?php } ?>
             
                 <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
-                <?=$ads['BOTTOM_SQRE_1'] ?>
+<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_1'] ?></template></div>
                 <?php } ?>
                 <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
-                <?=$ads['BOTTOM_SQRE_2'] ?>
+<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_2'] ?></template></div>
                 <?php } ?>
               </div>
               <div class="section_title">
@@ -172,10 +172,10 @@
             </div>
             <div class="col-md-4 col-sm-12 hidden-xs">
                <?php if(isset($ads['RIGHT_WIDE_1'])){ ?>
-                <?=$ads['RIGHT_WIDE_1'] ?>
+<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_1'] ?></template></div>
                 <?php } ?>
                  <?php if(isset($ads['RIGHT_SQRE_1'])){ ?>
-                <?=$ads['RIGHT_SQRE_1'] ?>
+<div class="ad-lazy"><template><?=$ads['RIGHT_SQRE_1'] ?></template></div>
                 <?php } ?>
               <div class="mg_block mg_rank">
                 <div class="rank_tab">
@@ -250,10 +250,10 @@
                 </div>
               </div>
                <?php if(isset($ads['RIGHT_SQRE_2'])){ ?>
-                <?=$ads['RIGHT_SQRE_2'] ?>
+<div class="ad-lazy"><template><?=$ads['RIGHT_SQRE_2'] ?></template></div>
                 <?php } ?>
                 <?php if(isset($ads['RIGHT_WIDE_2'])){ ?>
-                <?=$ads['RIGHT_WIDE_2'] ?>
+<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_2'] ?></template></div>
                 <?php } ?>
             </div>
           </div>

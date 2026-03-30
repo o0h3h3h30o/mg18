@@ -385,5 +385,28 @@
       })
   </script>
 
+  <!-- Lazy load ads: inject after page content is ready -->
+  <script>
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      document.querySelectorAll('.ad-lazy').forEach(function(el){
+        var tpl = el.querySelector('template');
+        if(!tpl) return;
+        var tmp = document.createElement('div');
+        tmp.innerHTML = tpl.innerHTML;
+        // Activate script tags (innerHTML doesn't execute scripts)
+        tmp.querySelectorAll('script').forEach(function(oldScript){
+          var s = document.createElement('script');
+          if(oldScript.src) { s.src = oldScript.src; s.async = true; }
+          else { s.textContent = oldScript.textContent; }
+          if(oldScript.type) s.type = oldScript.type;
+          oldScript.parentNode.replaceChild(s, oldScript);
+        });
+        el.replaceChild(tmp, tpl);
+      });
+    }, 300);
+  });
+  </script>
+
 </body>
 </html>
