@@ -197,21 +197,17 @@ class Crawl extends \CodeIgniter\Controller
     }
 
     /**
-     * Reset view_day for all manga
+     * Reset views: day (always) + month (if 1st of month)
      */
-    public function resetDay()
+    public function resetView()
     {
         $this->db->query('UPDATE manga SET view_day = 0');
         echo "Reset view_day done.\n";
-    }
 
-    /**
-     * Reset view_month for all manga
-     */
-    public function resetMonth()
-    {
-        $this->db->query('UPDATE manga SET view_month = 0');
-        echo "Reset view_month done.\n";
+        if ((int)date('j') === 1) {
+            $this->db->query('UPDATE manga SET view_month = 0');
+            echo "Reset view_month done (1st of month).\n";
+        }
     }
 
     /**

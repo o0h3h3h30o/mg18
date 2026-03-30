@@ -37,15 +37,12 @@ class CrawlCommand extends BaseCommand
                 $_GET['url'] = $url;
                 $controller->mangadistrict();
                 break;
-            case 'resetday':
-                $controller->resetDay();
-                break;
-            case 'resetmonth':
-                $controller->resetMonth();
+            case 'resetview':
+                $controller->resetView();
                 break;
             default:
                 CLI::error("Unknown action: {$action}");
-                CLI::write('Available: index, chapter, chapter2, mangadistrict, resetday, resetmonth');
+                CLI::write('Available: index, chapter, chapter2, mangadistrict, resetview');
         }
     }
 }
