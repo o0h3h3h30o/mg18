@@ -42,12 +42,17 @@ class Crawl extends \CodeIgniter\Controller
 
             foreach ($mangaList as $idx => $item) {
                 $num = $idx + 1;
+
+                // Chỉ xử lý manga có adult-badges (18+)
+                if (!($item['is_18'] ?? 0)) {
+                    echo "[{$num}] SKIP (not 18+): {$item['title']}\n";
+                    continue;
+                }
+
                 $sourceUrl = 'https://manga18fx.com' . $item['source'];
                 $existingManga = $this->findMangaByLink($sourceUrl);
 
-                echo "\n[{$num}] {$item['title']}";
-                echo $item['is_18'] ? ' [18+]' : ' [--]';
-                echo " | Last: {$item['last_chapter']}\n";
+                echo "\n[{$num}] {$item['title']} [18+] | Last: {$item['last_chapter']}\n";
 
                 if (!$existingManga) {
                     echo "  => NEW manga\n";
