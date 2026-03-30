@@ -79,7 +79,9 @@
 
 <!--End tag-->
     <?php if($is_logged): ?>
-    <style>.guest-nav,.guest-nav-mb{display:none!important}li.user-nav{display:inline-block!important}.user-nav-mb{display:block!important}.bell-ico.user-nav-mb{display:inline-block!important}</style>
+    <style>.guest-nav,.guest-nav-mb{display:none!important}</style>
+    <?php else: ?>
+    <style>.user-nav,.user-nav-mb{display:none!important}</style>
     <?php endif; ?>
    </head>
    <body style="background: url('<?=base_url()?>bg.jpeg');">
@@ -271,14 +273,9 @@
   /* Comment block spacing */
   .mg_block.mg_comment { margin-bottom: 30px; }
 
-  /* Default: hide logged-in nav (CF serves guest HTML) */
-  .header_center__right > ul > li.user-nav, .user-nav-mb { display: none; }
-  .user-nav, .user-nav-mb { transition: opacity .2s ease-in; }
   /* Fix layout shift: reserve fixed space for right nav */
   .header_center__right { min-width: 200px; flex-shrink: 0; }
-  /* Mobile bell icon */
   .top-header { display: flex; align-items: center; justify-content: space-between; }
-  .bell-ico { display: none; }
 </style>
 
 
