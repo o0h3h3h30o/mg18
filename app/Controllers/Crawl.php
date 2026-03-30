@@ -197,6 +197,24 @@ class Crawl extends \CodeIgniter\Controller
     }
 
     /**
+     * Reset view_day for all manga
+     */
+    public function resetDay()
+    {
+        $this->db->query('UPDATE manga SET view_day = 0');
+        echo "Reset view_day done.\n";
+    }
+
+    /**
+     * Reset view_month for all manga
+     */
+    public function resetMonth()
+    {
+        $this->db->query('UPDATE manga SET view_month = 0');
+        echo "Reset view_month done.\n";
+    }
+
+    /**
      * Crawl single manga from mangadistrict by URL
      * Usage: /crawl/mangadistrict?url=https://mangadistrict.com/series/cuck-thology/
      */

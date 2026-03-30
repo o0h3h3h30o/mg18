@@ -9,14 +9,13 @@ class CrawlCommand extends BaseCommand
 {
     protected $group       = 'Crawl';
     protected $name        = 'crawl';
-    protected $description = 'Run crawl tasks. Usage: php spark crawl [action] [--dry]';
-    protected $usage       = 'crawl [index|chapter|chapter2|mangadistrict] [--dry] [--url=...]';
+    protected $description = 'Run crawl tasks';
+    protected $usage       = 'crawl [index|chapter|chapter2|mangadistrict|resetday|resetmonth] [--url=...]';
 
     public function run(array $params)
     {
         $action = $params[0] ?? 'index';
 
-        // Direct instantiation — Crawl no longer extends BaseController
         $controller = new \App\Controllers\Crawl();
 
         switch ($action) {
@@ -38,9 +37,15 @@ class CrawlCommand extends BaseCommand
                 $_GET['url'] = $url;
                 $controller->mangadistrict();
                 break;
+            case 'resetday':
+                $controller->resetDay();
+                break;
+            case 'resetmonth':
+                $controller->resetMonth();
+                break;
             default:
                 CLI::error("Unknown action: {$action}");
-                CLI::write('Available: index, chapter, chapter2, mangadistrict');
+                CLI::write('Available: index, chapter, chapter2, mangadistrict, resetday, resetmonth');
         }
     }
 }
