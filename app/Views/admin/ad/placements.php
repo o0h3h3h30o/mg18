@@ -350,11 +350,24 @@ function renderAdSelect($ads, $placements, $placementId, $position) {
     <div class="tab-pane fade" id="tab-info" role="tabpanel">
         <div class="card" style="border-top-left-radius:0;">
             <div class="card-body">
-                <p class="text-muted mb-3" style="font-size:12px;">Configure ad slots for the manhwa detail/info page. This page has no sidebar ads.</p>
+                <p class="text-muted mb-3" style="font-size:12px;">Configure ad slots for the manhwa detail/info page.</p>
 
-                <!-- TOP area -->
+                <!-- Manga Info -->
                 <div class="wireframe-section">
-                    <div class="section-label">Top Area</div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="wireframe-content" style="min-height:140px;">
+                                <div>
+                                    <i class="bi bi-file-earmark-text" style="font-size:24px;"></i>
+                                    <div style="margin-top:4px;">manga info</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOP ads (between info and chapters) -->
+                <div class="wireframe-section">
                     <div class="row g-2 mb-2">
                         <div class="col-12">
                             <div class="wireframe-box">
@@ -379,25 +392,22 @@ function renderAdSelect($ads, $placements, $placementId, $position) {
                     </div>
                 </div>
 
-                <!-- Main content -->
+                <!-- Manga Chapters -->
                 <div class="wireframe-section">
-                    <div class="section-label">Content Area</div>
                     <div class="row g-2">
                         <div class="col-12">
-                            <div class="wireframe-content" style="min-height:200px;">
+                            <div class="wireframe-content" style="min-height:180px;">
                                 <div>
-                                    <i class="bi bi-file-earmark-text" style="font-size:24px;"></i>
-                                    <div style="margin-top:4px;">Manhwa Info / Detail Content</div>
-                                    <div style="font-size:11px;color:var(--kt-text-muted);margin-top:2px;">Cover, description, chapters list, etc.</div>
+                                    <i class="bi bi-list-ol" style="font-size:24px;"></i>
+                                    <div style="margin-top:4px;">manga chapters</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- BOTTOM area -->
+                <!-- BOTTOM ads -->
                 <div class="wireframe-section">
-                    <div class="section-label">Bottom Area</div>
                     <div class="row g-2 mb-2">
                         <div class="col-12">
                             <div class="wireframe-box">
