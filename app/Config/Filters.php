@@ -82,6 +82,8 @@ class Filters extends BaseFilters
                 'notifications/*',
                 'api/comments',
                 'api/comments/*',
+                'admin/reports/*',
+                'admin/chapters/*',
             ]],
         ],
         'after' => [
