@@ -462,7 +462,7 @@ class Comment extends BaseController
 
             $result[] = [
                 'id'         => $c->id,
-                'comment'    => esc(mb_substr($c->comment, 0, 120)) . (mb_strlen($c->comment) > 120 ? '...' : ''),
+                'comment'    => esc($c->comment),
                 'username'   => esc($c->username ?? 'Unknown'),
                 'avatar'     => $avatarUrl,
                 'time_ago'   => $this->timeAgo($c->created_at),
