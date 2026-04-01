@@ -266,6 +266,7 @@
                 <ul>
                   <li class="active"><a data-toggle="tab" href="#tab_chapter_cmt" aria-expanded="true">CHAPTER COMMENTS</a></li>
                   <li><a data-toggle="tab" href="#tab_manga_cmt" aria-expanded="false">MANGA COMMENTS</a></li>
+                  <li><a data-toggle="tab" href="#tab_disq_cmt" aria-expanded="false">DISQ COMMENTS</a></li>
                 </ul>
                 <div class="tab-content">
                   <div id="tab_chapter_cmt" class="tab-pane active fade in">
@@ -281,6 +282,22 @@
                           $comment_post_type = 'manga_all';
                           include APPPATH . 'Views/include/comments.php';
                         ?>
+                  </div>
+                  <div id="tab_disq_cmt" class="tab-pane fade in">
+                    <div id="easyComment_Content_reader"></div>
+                    <script type="text/javascript">
+                      var easyComment_ContentID = document.title;
+                      var easyComment_Language = 'en';
+                      var easyComment_FooterLinks = 'On';
+                      var easyComment_Domain = 'https://disq.manga18.club';
+                      (function() {
+                        var EC = document.createElement('script');
+                        EC.type = 'text/javascript';
+                        EC.async = true;
+                        EC.src = easyComment_Domain + '/plugin/embed.js';
+                        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(EC);
+                      })();
+                    </script>
                   </div>
                 </div>
             </div>

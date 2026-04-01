@@ -248,7 +248,7 @@
                 <div class="rank_tab">
                   <ul>
                     <li class="active"><a data-toggle="tab" href="#chat_manga18" aria-expanded="false">MANGA DISCUSSION</a></li>
-                    
+                    <li><a data-toggle="tab" href="#chat_disq" aria-expanded="false">DISQ COMMENTS</a></li>
                   </ul>
                   <div class="tab-content">
                     <div id="chat_manga18" class="tab-pane active fade in">
@@ -258,10 +258,24 @@
                           $comment_post_type = 'manga_all';
                           include APPPATH . 'Views/include/comments.php';
                         ?>
-
                     </div>
                   </div>
-                 
+                    <div id="chat_disq" class="tab-pane fade in">
+                      <div id="easyComment_Content"></div>
+                      <script type="text/javascript">
+                        var easyComment_ContentID = document.title;
+                        var easyComment_Language = 'en';
+                        var easyComment_FooterLinks = 'On';
+                        var easyComment_Domain = 'https://disq.manga18.club';
+                        (function() {
+                          var EC = document.createElement('script');
+                          EC.type = 'text/javascript';
+                          EC.async = true;
+                          EC.src = easyComment_Domain + '/plugin/embed.js';
+                          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(EC);
+                        })();
+                      </script>
+                    </div>
                 </div>
               </div>
             </div>
