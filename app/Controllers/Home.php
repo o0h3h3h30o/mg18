@@ -8,7 +8,7 @@ class Home extends BaseController
     {
 
         $data = $this->getCommonData();
-        $data['ads'] = $this->getAds(2);
+        $data['ads'] = $this->getAds(1);
         $data['vip'] = 0;
 
         $sql = 'SELECT m.id as manga_id, m.is_new as is_new, m.slug as manga_slug,

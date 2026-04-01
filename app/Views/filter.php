@@ -16,6 +16,17 @@
     </div>
     <div class="grid_main">
       <div class="container">
+        <div class="divads" style="text-align: center;">
+            <?php if(isset($ads['TOP_LARGE'])){ ?>
+<?=$ads['TOP_LARGE'] ?>
+            <?php } ?>
+            <?php if(isset($ads['TOP_SQRE_1'])){ ?>
+<?=$ads['TOP_SQRE_1'] ?>
+            <?php } ?>
+            <?php if(isset($ads['TOP_SQRE_2'])){ ?>
+<?=$ads['TOP_SQRE_2'] ?>
+            <?php } ?>
+        </div>
         <div class="row">
           <div class="col-md-9 col-sm-12 col-xs-12">
             <div class="grid_content">
@@ -77,9 +88,26 @@
               <div class="section_pagination">
                 <?=$links?>
               </div>
+              <div class="divads" style="">
+                <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
+<?=$ads['BOTTOM_LARGE'] ?>
+                <?php } ?>
+                <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
+<?=$ads['BOTTOM_SQRE_1'] ?>
+                <?php } ?>
+                <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
+<?=$ads['BOTTOM_SQRE_2'] ?>
+                <?php } ?>
+              </div>
             </div>
           </div>
           <div class="col-md-3 col-sm-12 col-xs-12">
+                <?php if(isset($ads['RIGHT_WIDE_1'])){ ?>
+<?=$ads['RIGHT_WIDE_1'] ?>
+                <?php } ?>
+                <?php if(isset($ads['RIGHT_SQRE_1'])){ ?>
+<?=$ads['RIGHT_SQRE_1'] ?>
+                <?php } ?>
             <div class="mg_block">
               <div class="section_title">
                 <h5>Browse Manga by Genres</h5>
@@ -92,6 +120,12 @@
                 </ul>
               </div>
             </div>
+                <?php if(isset($ads['RIGHT_SQRE_2'])){ ?>
+<?=$ads['RIGHT_SQRE_2'] ?>
+                <?php } ?>
+                <?php if(isset($ads['RIGHT_WIDE_2'])){ ?>
+<?=$ads['RIGHT_WIDE_2'] ?>
+                <?php } ?>
           </div>
         </div>
       </div>

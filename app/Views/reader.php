@@ -69,14 +69,11 @@
              
               <div class="col-md-12 " >
                 <br>
-                <div class="divads" style="">
-
-<script  async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
-<ins class="eas6a97888e37" data-zoneid="5251336"></ins>
-<script type="module">(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
-
-                  </div>
-                <div class="clear-fix"></div>
+                <div class="divads" style="text-align:center;">
+                <?php if(isset($ads['TOP_LARGE'])){ ?>
+<?=$ads['TOP_LARGE'] ?>
+                <?php } ?>
+                </div>
                 <div style="display: table;">
                 <?php if(isset($ads['TOP_SQRE_1'])){ ?>
 <?=$ads['TOP_SQRE_1'] ?>

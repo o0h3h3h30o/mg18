@@ -11,7 +11,7 @@ class Manga extends BaseController
         }
 
         $data = $this->getCommonData();
-        $data['ads'] = $this->getAds(3);
+        $data['ads'] = $this->getAds(2);
 
         $manga_info = $this->db->table('manga')->where('slug', $slug)->get()->getRow();
 
@@ -105,7 +105,7 @@ class Manga extends BaseController
         }
 
         $data = $this->getCommonData();
-        $data['ads'] = $this->getAds(1);
+        $data['ads'] = $this->getAds(3);
 
         $chapter_slug = $this->request->getUri()->getSegment(3, '');
 
@@ -264,6 +264,7 @@ class Manga extends BaseController
 
         $order_by = $this->request->getGet('order_by') ?? 'lastest';
         $data = $this->getCommonData();
+        $data['ads'] = $this->getAds(1);
 
         $page = (int)($page ?? 0);
 
@@ -315,6 +316,7 @@ class Manga extends BaseController
     {
         $order_by = $this->request->getGet('order_by') ?? 'lastest';
         $data = $this->getCommonData();
+        $data['ads'] = $this->getAds(1);
 
         $page = (int)($page ?? 0);
 

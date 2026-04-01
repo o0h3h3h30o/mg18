@@ -12,7 +12,7 @@ class Lasted extends BaseController
         }
 
         $data = $this->getCommonData();
-        $data['ads'] = $this->getAds(2);
+        $data['ads'] = $this->getAds(1);
 
         // Batch SEO options in 1 query
         $seoOptions = $this->getOptionsByKeys(['seo.title', 'seo.description', 'seo.keywords']);
