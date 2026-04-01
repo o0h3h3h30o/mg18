@@ -10,7 +10,7 @@
 <div class="card">
     <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
-            <thead><tr><th>ID</th><th>Number</th><th>Name</th><th>Views</th><th>Crawl</th><th>Show</th><th>Login</th><th width="150">Actions</th></tr></thead>
+            <thead><tr><th>ID</th><th>Number</th><th>Name</th><th>Views</th><th>Created</th><th>Crawl</th><th>Show</th><th>Login</th><th width="150">Actions</th></tr></thead>
             <tbody>
             <?php foreach ($chapters as $ch): ?>
                 <tr>
@@ -23,6 +23,7 @@
                         <?php endif; ?>
                     </td>
                     <td><?= number_format($ch->view) ?></td>
+                    <td><small class="text-muted"><?= !empty($ch->created_at) ? date('d/m/Y H:i', strtotime($ch->created_at)) : '-' ?></small></td>
                     <td>
                         <?php if ((int)$ch->is_crawling === 0): ?>
                             <span class="badge bg-success">Done</span>
