@@ -51,39 +51,48 @@ class ReportController extends BaseController
         // Get report info before updating
         $report = $this->db->table('chapter_report')->where('id', $id)->get()->getRow();
 
+        if (!$report) {
+            return redirect()->back()->with('error', 'Report not found.');
+        }
+
         $this->db->table('chapter_report')->where('id', $id)->update([
             'status'      => 'resolved',
             'resolved_at' => date('Y-m-d H:i:s'),
         ]);
 
         // Notify the reporter if they were logged in
-        if ($report && !empty($report->user_id)) {
-            // Get manga/chapter info for the link
-            $chapter = $this->db->table('chapter')
-                ->select('chapter.slug as chapter_slug, chapter.number, manga.id as manga_id, manga.slug as manga_slug, manga.name as manga_name')
-                ->join('manga', 'manga.id = chapter.manga_id')
-                ->where('chapter.id', $report->chapter_id)
-                ->get()->getRow();
+        if (!empty($report->user_id)) {
+            try {
+                // Get manga/chapter info for the link
+                $chapter = $this->db->table('chapter')
+                    ->select('chapter.slug as chapter_slug, chapter.number, manga.id as manga_id, manga.slug as manga_slug, manga.name as manga_name')
+                    ->join('manga', 'manga.id = chapter.manga_id')
+                    ->where('chapter.id', $report->chapter_id)
+                    ->get()->getRow();
 
-            $link = '/';
-            $chapterLabel = 'Chapter';
-            if ($chapter) {
-                $link = '/manhwa/' . $chapter->manga_slug . '/' . $chapter->chapter_slug;
-                $chapterLabel = $chapter->manga_name . ' - Chapter ' . $chapter->number;
+                $chapterLabel = 'Chapter';
+                if ($chapter) {
+                    $chapterLabel = $chapter->manga_name . ' - Chapter ' . $chapter->number;
+                }
+
+                $this->db->table('notifications')->insert([
+                    'user_id'      => (int) $report->user_id,
+                    'actor_id'     => (int) $this->user_info->id,
+                    'type'         => 'report_resolved',
+                    'manga_id'     => $chapter ? (int)$report->manga_id : null,
+                    'manga_slug'   => $chapter ? $chapter->manga_slug : null,
+                    'manga_name'   => $chapter ? $chapter->manga_name : null,
+                    'chapter_slug' => $chapter ? $chapter->chapter_slug : '',
+                    'preview'      => $chapterLabel . ' issue has been fixed. Thank you!',
+                    'is_read'      => 0,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+                log_message('info', 'Notification sent for report #' . $id . ' to user #' . $report->user_id);
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send notification for report #' . $id . ': ' . $e->getMessage());
             }
-
-            $this->db->table('notifications')->insert([
-                'user_id'      => $report->user_id,
-                'actor_id'     => (int) $this->user_info->id,
-                'type'         => 'report_resolved',
-                'manga_id'     => $chapter ? (int)$report->manga_id : null,
-                'manga_slug'   => $chapter ? $chapter->manga_slug : null,
-                'manga_name'   => $chapter ? $chapter->manga_name : null,
-                'chapter_slug' => $chapter ? $chapter->chapter_slug : '',
-                'preview'      => $chapterLabel . ' issue has been fixed. Thank you!',
-                'is_read'      => 0,
-                'created_at'   => date('Y-m-d H:i:s'),
-            ]);
+        } else {
+            log_message('info', 'Report #' . $id . ' has no user_id (guest report), skipping notification.');
         }
 
         return redirect()->back()->with('success', 'Report resolved.');

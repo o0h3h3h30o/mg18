@@ -118,6 +118,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'ad
     $routes->get('chapters/edit/(:num)', 'ChapterController::edit/$1');
     $routes->post('chapters/update/(:num)', 'ChapterController::update/$1');
     $routes->post('chapters/delete/(:num)', 'ChapterController::delete/$1');
+    $routes->get('chapters/recrawl/(:num)', 'ChapterController::recrawl/$1');
 
     // Pages (chapter images)
     $routes->get('pages/(:num)', 'PageController::index/$1');

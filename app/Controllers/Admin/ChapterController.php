@@ -155,6 +155,49 @@ class ChapterController extends BaseController
         return redirect()->to('/admin/chapters/' . $item->manga_id)->with('success', 'Chapter updated.');
     }
 
+    public function recrawl($id)
+    {
+        $item = $this->model->find($id);
+        if (!$item) return redirect()->to('/admin/manga')->with('error', 'Chapter not found.');
+
+        if (empty($item->source_url)) {
+            return redirect()->to('/admin/chapters/edit/' . $id)->with('error', 'No source_url set. Please enter a source URL first.');
+        }
+
+        $manga = $this->db->table('manga')->where('id', $item->manga_id)->get()->getRow();
+
+        try {
+            // Delete existing pages from DB
+            $this->db->table('page')->where('chapter_id', $id)->delete();
+
+            // Delete chapter folder on disk
+            if ($manga) {
+                $chapterDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $item->slug;
+                if (is_dir($chapterDir)) {
+                    $files = new \RecursiveIteratorIterator(
+                        new \RecursiveDirectoryIterator($chapterDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                        \RecursiveIteratorIterator::CHILD_FIRST
+                    );
+                    foreach ($files as $f) {
+                        $f->isDir() ? rmdir($f->getRealPath()) : unlink($f->getRealPath());
+                    }
+                    rmdir($chapterDir);
+                }
+            }
+
+            // Reset chapter to be picked up by crawler
+            $this->model->update($id, [
+                'is_show'     => 0,
+                'is_crawling' => 0,
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Re-crawl chapter failed: ' . $e->getMessage());
+            return redirect()->to('/admin/chapters/edit/' . $id)->with('error', 'Re-crawl failed: ' . $e->getMessage());
+        }
+
+        return redirect()->to('/admin/chapters/edit/' . $id)->with('success', 'Chapter queued for re-crawl. Pages deleted, is_show=0, is_crawling=0. Crawler will pick it up.');
+    }
+
     public function delete($id)
     {
         $item = $this->model->find($id);

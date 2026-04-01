@@ -71,6 +71,26 @@ abstract class BaseController extends Controller
         }
     }
 
+    /**
+     * Get real client IP behind proxy/Cloudflare
+     */
+    protected function getRealIP(): string
+    {
+        // Priority: CF-Connecting-IP > X-Real-IP > X-Forwarded-For > REMOTE_ADDR
+        $headers = ['CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For'];
+        foreach ($headers as $header) {
+            $val = $this->request->getServer('HTTP_' . str_replace('-', '_', strtoupper($header)));
+            if (!empty($val)) {
+                // X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
+                $ip = trim(explode(',', $val)[0]);
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
+        return $this->request->getIPAddress();
+    }
+
     protected function getOptionByKey(string $key): string
     {
         $row = $this->db->table('options')

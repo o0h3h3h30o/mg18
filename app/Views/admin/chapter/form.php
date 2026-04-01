@@ -60,6 +60,9 @@
             <a href="/admin/updatePublishChapter?chapter_id=<?= $item->id ?>" class="btn btn-success" onclick="return confirm('Publish this chapter and update manga info?')">
                 <i class="bi bi-send-fill"></i> Publish Chapter
             </a>
+            <a href="/admin/chapters/recrawl/<?= $item->id ?>" class="btn btn-warning" onclick="return confirm('This will DELETE all existing pages and queue the chapter for re-crawl using its source_url. Continue?')">
+                <i class="bi bi-arrow-repeat"></i> Re-crawl
+            </a>
             <?php endif; ?>
             <a href="/admin/manga/edit/<?= $manga->id ?>" class="btn btn-secondary">Back to Manga</a>
         </form>

@@ -432,7 +432,7 @@ class Manga extends BaseController
         $totalRate = (int)($ratingInfo->total ?? 0);
 
         // Check if current IP already voted
-        $ip = $this->request->getIPAddress();
+        $ip = $this->getRealIP();
         $voted = $this->db->table('item_ratings')
             ->where('item_id', $mangaId)
             ->where('ip_address', $ip)
@@ -502,7 +502,7 @@ class Manga extends BaseController
             return $this->response->setBody('0');
         }
 
-        $ip = $this->request->getIPAddress();
+        $ip = $this->getRealIP();
 
         // Prevent duplicate vote per IP per manga
         $existing = $this->db->table('item_ratings')
@@ -674,7 +674,7 @@ class Manga extends BaseController
         }
 
         // Rate limit: 1 report per IP per chapter per day
-        $ip = $this->request->getIPAddress();
+        $ip = $this->getRealIP();
         $existing = $this->db->table('chapter_report')
             ->where('chapter_id', $chapterId)
             ->where('ip_address', $ip)
