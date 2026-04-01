@@ -156,14 +156,22 @@ function renderAdSelect($ads, $placements, $placementId, $position) {
                 <!-- TOP area -->
                 <div class="wireframe-section">
                     <div class="section-label">Top Area</div>
-                    <div class="row g-2">
-                        <div class="col-6">
+                    <div class="row g-2 mb-2 justify-content-center">
+                        <div class="col-md-8">
+                            <div class="wireframe-box">
+                                <span class="slot-label">TOP_LARGE</span>
+                                <?= renderAdSelect($ads, $placements, 3, 'TOP_LARGE') ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 justify-content-center">
+                        <div class="col-md-4">
                             <div class="wireframe-box">
                                 <span class="slot-label">TOP_SQRE_1</span>
                                 <?= renderAdSelect($ads, $placements, 3, 'TOP_SQRE_1') ?>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-md-4">
                             <div class="wireframe-box">
                                 <span class="slot-label">TOP_SQRE_2</span>
                                 <?= renderAdSelect($ads, $placements, 3, 'TOP_SQRE_2') ?>
@@ -213,22 +221,22 @@ function renderAdSelect($ads, $placements, $placementId, $position) {
                 <!-- BOTTOM area -->
                 <div class="wireframe-section">
                     <div class="section-label">Bottom Area</div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12">
+                    <div class="row g-2 mb-2 justify-content-center">
+                        <div class="col-md-8">
                             <div class="wireframe-box">
                                 <span class="slot-label">BOTTOM_LARGE</span>
                                 <?= renderAdSelect($ads, $placements, 3, 'BOTTOM_LARGE') ?>
                             </div>
                         </div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-6">
+                    <div class="row g-2 justify-content-center">
+                        <div class="col-md-4">
                             <div class="wireframe-box">
                                 <span class="slot-label">BOTTOM_SQRE_1</span>
                                 <?= renderAdSelect($ads, $placements, 3, 'BOTTOM_SQRE_1') ?>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-md-4">
                             <div class="wireframe-box">
                                 <span class="slot-label">BOTTOM_SQRE_2</span>
                                 <?= renderAdSelect($ads, $placements, 3, 'BOTTOM_SQRE_2') ?>
