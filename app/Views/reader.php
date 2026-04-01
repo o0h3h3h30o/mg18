@@ -261,20 +261,6 @@
 
               </div>
 
-            <div class="col-md-12 center" style="margin:auto;text-align: center !important; ">
-              <div class="divads" style="">
-                <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
-<?=$ads['BOTTOM_LARGE'] ?>
-                <?php } ?>
-              </div>
-                <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
-<?=$ads['BOTTOM_SQRE_1'] ?>
-                <?php } ?>
-                <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
-<?=$ads['BOTTOM_SQRE_2'] ?>
-                <?php } ?>
-            </div>
-
             <div class="mg_rank detail_chat">
               <div class="rank_tab">
                 <ul>
@@ -315,6 +301,20 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div class="col-md-12 center" style="margin:auto;text-align: center !important; ">
+              <div class="divads" style="">
+                <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
+<?=$ads['BOTTOM_LARGE'] ?>
+                <?php } ?>
+              </div>
+                <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
+<?=$ads['BOTTOM_SQRE_1'] ?>
+                <?php } ?>
+                <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
+<?=$ads['BOTTOM_SQRE_2'] ?>
+                <?php } ?>
             </div>
 
                 <?php if(isset($ads['LEFT_WIDE_1'])){ ?>
