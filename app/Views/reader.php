@@ -261,61 +261,63 @@
 
               </div>
 
-            <div class="mg_rank detail_chat">
-              <div class="rank_tab">
-                <ul>
-                  <li class="active"><a data-toggle="tab" href="#tab_chapter_cmt" aria-expanded="true">CHAPTER COMMENTS</a></li>
-                  <li><a data-toggle="tab" href="#tab_manga_cmt" aria-expanded="false">MANGA COMMENTS</a></li>
-                  <li><a data-toggle="tab" href="#tab_disq_cmt" aria-expanded="false">DISQ COMMENTS</a></li>
-                </ul>
-                <div class="tab-content">
-                  <div id="tab_chapter_cmt" class="tab-pane active fade in">
-                        <?php
-                          $comment_post_id = $chapter_info->id;
-                          $comment_post_type = 'chapter';
-                          include APPPATH . 'Views/include/comments.php';
-                        ?>
-                  </div>
-                  <div id="tab_manga_cmt" class="tab-pane fade in">
-                        <?php
-                          $comment_post_id = $manga_info->id;
-                          $comment_post_type = 'manga_all';
-                          include APPPATH . 'Views/include/comments.php';
-                        ?>
-                  </div>
-                  <div id="tab_disq_cmt" class="tab-pane fade in">
-                    <div id="easyComment_Content"></div>
-                    <script type="text/javascript">
-                      var easyComment_ContentID = document.title;
-                      var easyComment_Language = 'en';
-                      var easyComment_FooterLinks = 'On';
-                      var easyComment_Domain = 'https://disq.manga18.club';
-                      (function() {
-                        var EC = document.createElement('script');
-                        EC.type = 'text/javascript';
-                        EC.async = true;
-                        EC.src = easyComment_Domain + '/plugin/embed.js';
-                        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(EC);
-                      })();
-                    </script>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-12 center" style="margin:auto;text-align: center !important; ">
-              <div class="divads" style="">
+               <div class="divads" style="">
                 <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
 <?=$ads['BOTTOM_LARGE'] ?>
                 <?php } ?>
-              </div>
                 <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
 <?=$ads['BOTTOM_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
 <?=$ads['BOTTOM_SQRE_2'] ?>
                 <?php } ?>
-            </div>
+                </div>
+                <br>
+              <div class="mg_rank detail_chat">
+                <div class="rank_tab">
+                  <ul>
+                    <li class="active"><a data-toggle="tab" href="#tab_chapter_cmt" aria-expanded="true">CHAPTER COMMENTS</a></li>
+                    <li><a data-toggle="tab" href="#tab_manga_cmt" aria-expanded="false">MANGA COMMENTS</a></li>
+                    <li><a data-toggle="tab" href="#tab_disq_cmt" aria-expanded="false">DISQ COMMENTS</a></li>
+                  </ul>
+                  <div class="tab-content">
+                    <div id="tab_chapter_cmt" class="tab-pane active fade in">
+                      <div class="chat_manga18">
+                        <?php
+                          $comment_post_id = $chapter_info->id;
+                          $comment_post_type = 'chapter';
+                          include APPPATH . 'Views/include/comments.php';
+                        ?>
+                      </div>
+                    </div>
+                    <div id="tab_manga_cmt" class="tab-pane fade in">
+                      <div class="chat_manga18">
+                        <?php
+                          $comment_post_id = $manga_info->id;
+                          $comment_post_type = 'manga_all';
+                          include APPPATH . 'Views/include/comments.php';
+                        ?>
+                      </div>
+                    </div>
+                    <div id="tab_disq_cmt" class="tab-pane fade in">
+                      <div id="easyComment_Content"></div>
+                      <script type="text/javascript">
+                        var easyComment_ContentID = document.title;
+                        var easyComment_Language = 'en';
+                        var easyComment_FooterLinks = 'On';
+                        var easyComment_Domain = 'https://disq.manga18.club';
+                        (function() {
+                          var EC = document.createElement('script');
+                          EC.type = 'text/javascript';
+                          EC.async = true;
+                          EC.src = easyComment_Domain + '/plugin/embed.js';
+                          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(EC);
+                        })();
+                      </script>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
                 <?php if(isset($ads['LEFT_WIDE_1'])){ ?>
 <?=$ads['LEFT_WIDE_1'] ?>
