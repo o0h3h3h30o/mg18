@@ -158,28 +158,38 @@ class ChapterController extends BaseController
     public function delete($id)
     {
         $item = $this->model->find($id);
-        if (!$item) return redirect()->to('/admin/manga');
+        if (!$item) return redirect()->to('/admin/manga')->with('error', 'Chapter not found.');
 
         $manga = $this->db->table('manga')->where('id', $item->manga_id)->get()->getRow();
         $mangaId = $item->manga_id;
 
-        // Delete pages from DB
-        $this->db->table('page')->where('chapter_id', $id)->delete();
-        $this->model->delete($id);
+        try {
+            // Delete related comments
+            $this->db->table('comments')->where('post_type', 'chapter')->where('post_id', $id)->delete();
 
-        // Delete chapter folder on disk
-        if ($manga) {
-            $chapterDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $item->slug;
-            if (is_dir($chapterDir)) {
-                $files = new \RecursiveIteratorIterator(
-                    new \RecursiveDirectoryIterator($chapterDir, \RecursiveDirectoryIterator::SKIP_DOTS),
-                    \RecursiveIteratorIterator::CHILD_FIRST
-                );
-                foreach ($files as $f) {
-                    $f->isDir() ? rmdir($f->getRealPath()) : unlink($f->getRealPath());
+            // Delete pages from DB
+            $this->db->table('page')->where('chapter_id', $id)->delete();
+
+            // Delete chapter from DB
+            $this->model->delete($id);
+
+            // Delete chapter folder on disk
+            if ($manga) {
+                $chapterDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $item->slug;
+                if (is_dir($chapterDir)) {
+                    $files = new \RecursiveIteratorIterator(
+                        new \RecursiveDirectoryIterator($chapterDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                        \RecursiveIteratorIterator::CHILD_FIRST
+                    );
+                    foreach ($files as $f) {
+                        $f->isDir() ? rmdir($f->getRealPath()) : unlink($f->getRealPath());
+                    }
+                    rmdir($chapterDir);
                 }
-                rmdir($chapterDir);
             }
+        } catch (\Exception $e) {
+            log_message('error', 'Delete chapter failed: ' . $e->getMessage());
+            return redirect()->to('/admin/chapters/' . $mangaId)->with('error', 'Delete failed: ' . $e->getMessage());
         }
 
         return redirect()->to('/admin/chapters/' . $mangaId)->with('success', 'Chapter deleted.');
