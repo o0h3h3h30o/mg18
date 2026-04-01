@@ -82,6 +82,7 @@ class ReportController extends BaseController
                 'chapter_slug' => $chapter ? $chapter->chapter_slug : '',
                 'preview'      => $chapterLabel . ' issue has been fixed. Thank you!',
                 'is_read'      => 0,
+                'created_at'   => date('Y-m-d H:i:s'),
             ]);
         }
 
@@ -107,9 +108,41 @@ class ReportController extends BaseController
     {
         $ids = $this->request->getPost('report_ids');
         if (!empty($ids) && is_array($ids)) {
+            $intIds = array_map('intval', $ids);
+
+            // Get reports with chapter info for notifications
+            $reports = $this->db->table('chapter_report r')
+                ->select('r.*, c.slug as chapter_slug, c.number, m.slug as manga_slug, m.name as manga_name, m.id as mid')
+                ->join('chapter c', 'c.id = r.chapter_id', 'left')
+                ->join('manga m', 'm.id = r.manga_id', 'left')
+                ->whereIn('r.id', $intIds)
+                ->where('r.user_id IS NOT NULL')
+                ->get()->getResult();
+
+            // Update status
             $this->db->table('chapter_report')
-                ->whereIn('id', array_map('intval', $ids))
+                ->whereIn('id', $intIds)
                 ->update(['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')]);
+
+            // Send notifications
+            $now = date('Y-m-d H:i:s');
+            foreach ($reports as $r) {
+                if (empty($r->user_id)) continue;
+                $chapterLabel = ($r->manga_name ?? '') . ' - Chapter ' . ($r->number ?? '');
+                $this->db->table('notifications')->insert([
+                    'user_id'      => $r->user_id,
+                    'actor_id'     => (int) $this->user_info->id,
+                    'type'         => 'report_resolved',
+                    'manga_id'     => $r->mid ? (int)$r->mid : null,
+                    'manga_slug'   => $r->manga_slug,
+                    'manga_name'   => $r->manga_name,
+                    'chapter_slug' => $r->chapter_slug ?? '',
+                    'preview'      => $chapterLabel . ' issue has been fixed. Thank you!',
+                    'is_read'      => 0,
+                    'created_at'   => $now,
+                ]);
+            }
+
             return redirect()->back()->with('success', count($ids) . ' reports resolved.');
         }
         return redirect()->back()->with('error', 'No reports selected.');
