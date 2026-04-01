@@ -577,70 +577,23 @@ class Manga extends BaseController
 
     public function reportCaptcha()
     {
-        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-        $code = '';
-        for ($i = 0; $i < 5; $i++) {
-            $code .= $chars[random_int(0, strlen($chars) - 1)];
+        $a = random_int(1, 20);
+        $b = random_int(1, 20);
+        $op = random_int(0, 1) ? '+' : '-';
+
+        if ($op === '-' && $b > $a) {
+            [$a, $b] = [$b, $a]; // ensure positive result
         }
 
-        $session = service('session');
-        $session->set('report_captcha', strtolower($code));
-        $session->set('report_captcha_time', time());
+        $answer = $op === '+' ? $a + $b : $a - $b;
+        $ts = time();
+        $token = hash_hmac('sha256', $answer . '|' . $ts, config('Encryption')->key ?? 'manga18_secret_key');
 
-        $width = 160;
-        $height = 50;
-        $img = imagecreatetruecolor($width, $height);
-
-        // Background
-        $bg = imagecolorallocate($img, 28, 51, 46);
-        imagefill($img, 0, 0, $bg);
-
-        // Noise lines
-        for ($i = 0; $i < 6; $i++) {
-            $lineColor = imagecolorallocate($img, random_int(40, 120), random_int(60, 130), random_int(50, 110));
-            imageline($img, random_int(0, $width), random_int(0, $height), random_int(0, $width), random_int(0, $height), $lineColor);
-        }
-
-        // Noise dots
-        for ($i = 0; $i < 80; $i++) {
-            $dotColor = imagecolorallocate($img, random_int(60, 180), random_int(60, 180), random_int(60, 180));
-            imagesetpixel($img, random_int(0, $width), random_int(0, $height), $dotColor);
-        }
-
-        // Draw characters
-        $fontFile = FCPATH . 'captcha_font.ttf';
-        $useGdFont = !file_exists($fontFile);
-
-        for ($i = 0; $i < strlen($code); $i++) {
-            $r = random_int(100, 230);
-            $g = random_int(180, 255);
-            $b = random_int(100, 220);
-            $color = imagecolorallocate($img, $r, $g, $b);
-            $x = 14 + $i * 28;
-            $y = random_int(28, 38);
-
-            if ($useGdFont) {
-                $fontSize = 5; // GD built-in font
-                imagestring($img, $fontSize, $x, $y - 20, $code[$i], $color);
-            } else {
-                $fontSize = random_int(20, 26);
-                $angle = random_int(-20, 20);
-                imagettftext($img, $fontSize, $angle, $x, $y, $color, $fontFile, $code[$i]);
-            }
-        }
-
-        ob_start();
-        imagepng($img);
-        $imageData = ob_get_clean();
-        imagedestroy($img);
-
-        return $this->response
-            ->setStatusCode(200)
-            ->setContentType('image/png')
-            ->removeHeader('Cache-Control')
-            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
-            ->setHeader('Pragma', 'no-cache')
-            ->setBody($imageData);
+        return $this->response->setJSON([
+            'question' => "$a $op $b = ?",
+            'token'    => $token,
+            'ts'       => $ts,
+        ]);
     }
 
     public function reportChapter()
@@ -658,19 +611,21 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Missing data']);
         }
 
-        // Verify captcha
-        $session = service('session');
-        $captchaInput = strtolower(trim($this->request->getPost('captcha') ?? ''));
-        $captchaStored = $session->get('report_captcha');
-        $captchaTime = $session->get('report_captcha_time');
-        $session->remove(['report_captcha', 'report_captcha_time']); // one-time use
+        // Verify math captcha
+        $captchaAnswer = trim($this->request->getPost('captcha') ?? '');
+        $captchaToken = $this->request->getPost('captcha_token') ?? '';
+        $captchaTs = (int) ($this->request->getPost('captcha_ts') ?? 0);
 
-        if (!$captchaStored || !$captchaInput || $captchaInput !== $captchaStored) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid captcha']);
+        if ($captchaAnswer === '' || !$captchaToken || !$captchaTs) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Please solve the math question']);
         }
         // Expire after 5 minutes
-        if (!$captchaTime || (time() - $captchaTime) > 300) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Captcha expired']);
+        if ((time() - $captchaTs) > 300) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Captcha expired, please refresh']);
+        }
+        $expected = hash_hmac('sha256', $captchaAnswer . '|' . $captchaTs, config('Encryption')->key ?? 'manga18_secret_key');
+        if (!hash_equals($expected, $captchaToken)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Wrong answer, please try again']);
         }
 
         // Rate limit: 1 report per IP per chapter per day

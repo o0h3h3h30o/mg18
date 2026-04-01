@@ -163,12 +163,14 @@
                     </div>
                     <textarea id="reportNote" placeholder="Additional details (optional)" style="width:100%;background:#243b35;border:1px solid #3a5a50;border-radius:8px;color:#ccc;padding:10px 12px;font-size:14px;resize:vertical;min-height:60px;margin-top:12px;box-sizing:border-box;"></textarea>
                     <div style="margin-top:14px;">
-                      <label style="color:#ccc;font-size:13px;margin-bottom:6px;display:block;">Enter the code below to verify</label>
+                      <label style="color:#ccc;font-size:13px;margin-bottom:6px;display:block;">Solve to verify</label>
                       <div style="display:flex;align-items:center;gap:10px;">
-                        <img id="captchaImg" src="" style="border-radius:6px;cursor:pointer;height:50px;" title="Click to refresh" onclick="refreshCaptcha()">
-                        <button type="button" onclick="refreshCaptcha()" style="background:none;border:none;color:#7a9e8e;font-size:18px;cursor:pointer;padding:4px;" title="Refresh captcha">&#8635;</button>
+                        <span id="captchaQuestion" style="color:#e8e8e8;font-size:20px;font-weight:700;background:#243b35;border:1px solid #3a5a50;border-radius:6px;padding:8px 16px;letter-spacing:2px;"></span>
+                        <button type="button" onclick="refreshCaptcha()" style="background:none;border:none;color:#7a9e8e;font-size:18px;cursor:pointer;padding:4px;" title="Refresh">&#8635;</button>
                       </div>
-                      <input type="text" id="captchaInput" placeholder="Type the code here" autocomplete="off" maxlength="5" style="width:160px;background:#243b35;border:1px solid #3a5a50;border-radius:6px;color:#e8e8e8;padding:8px 12px;font-size:15px;margin-top:8px;letter-spacing:3px;box-sizing:border-box;">
+                      <input type="hidden" id="captchaToken" value="">
+                      <input type="hidden" id="captchaTs" value="">
+                      <input type="number" id="captchaInput" placeholder="Answer" autocomplete="off" style="width:120px;background:#243b35;border:1px solid #3a5a50;border-radius:6px;color:#e8e8e8;padding:8px 12px;font-size:15px;margin-top:8px;box-sizing:border-box;">
                       <div id="captchaError" style="display:none;color:#e52d27;font-size:13px;margin-top:4px;"></div>
                     </div>
                     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
@@ -185,7 +187,13 @@
                 </style>
                 <script>
                 function refreshCaptcha(){
-                  document.getElementById('captchaImg').src='/captcha/report?t='+Date.now();
+                  fetch('/captcha/report?t='+Date.now())
+                    .then(r=>r.json())
+                    .then(d=>{
+                      document.getElementById('captchaQuestion').textContent=d.question;
+                      document.getElementById('captchaToken').value=d.token;
+                      document.getElementById('captchaTs').value=d.ts;
+                    });
                   document.getElementById('captchaInput').value='';
                   document.getElementById('captchaError').style.display='none';
                 }
@@ -220,6 +228,8 @@
                   fd.append('reason',reason);
                   fd.append('note',note);
                   fd.append('captcha',captchaVal);
+                  fd.append('captcha_token',document.getElementById('captchaToken').value);
+                  fd.append('captcha_ts',document.getElementById('captchaTs').value);
                   fd.append('<?= csrf_token() ?>','<?= csrf_hash() ?>');
                   fetch('/report-chapter',{
                     method:'POST',
