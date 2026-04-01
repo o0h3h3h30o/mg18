@@ -56,6 +56,11 @@
                 </div>
             </div>
             <button class="btn btn-primary"><?= $isEdit ? 'Save' : 'Create Chapter' ?></button>
+            <?php if ($isEdit): ?>
+            <a href="/updatePublishChapter?chapter_id=<?= $item->id ?>" class="btn btn-success" onclick="return confirm('Publish this chapter and update manga info?')">
+                <i class="bi bi-send-fill"></i> Publish Chapter
+            </a>
+            <?php endif; ?>
             <a href="/admin/manga/edit/<?= $manga->id ?>" class="btn btn-secondary">Back to Manga</a>
         </form>
         <script>
