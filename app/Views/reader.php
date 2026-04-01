@@ -314,9 +314,8 @@
                     </script>
                   </div>
                 </div>
+              </div>
             </div>
-          </div>
-
 
                 <?php if(isset($ads['LEFT_WIDE_1'])){ ?>
 <?=$ads['LEFT_WIDE_1'] ?>
