@@ -38,6 +38,12 @@ class AdminFilter implements FilterInterface
         if ($user->role !== 'admin') {
             return redirect()->to('/')->with('error', 'Access denied.');
         }
+
+        // Enable debug/error display for admin routes only
+        if (ENVIRONMENT !== 'development') {
+            ini_set('display_errors', '1');
+            error_reporting(E_ALL);
+        }
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
