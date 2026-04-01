@@ -22,6 +22,9 @@ class AdController extends BaseController
         'RIGHT_WIDE_1',
         'RIGHT_SQRE_1',
         'RIGHT_SQRE_2',
+        'RIGHT_WIDE_2',
+        'LEFT_WIDE_1',
+        'LEFT_WIDE_2',
     ];
 
     // ========== ADS CRUD ==========
@@ -180,5 +183,33 @@ class AdController extends BaseController
     {
         $this->db->table('ad_placement')->where('id', $id)->delete();
         return redirect()->to('/admin/placements')->with('success', 'Placement deleted.');
+    }
+
+    public function saveAll()
+    {
+        $json = $this->request->getJSON(true);
+        $placements = $json['placements'] ?? [];
+
+        // Delete all existing placements
+        $this->db->table('ad_placement')->truncate();
+
+        // Insert new placements
+        foreach ($placements as $p) {
+            $placementId = (int)($p['placement_id'] ?? 0);
+            $position    = $p['placement'] ?? '';
+            $adId        = (int)($p['ad_id'] ?? 0);
+
+            if ($placementId < 1 || $adId < 1 || !in_array($position, $this->positions)) {
+                continue;
+            }
+
+            $this->db->table('ad_placement')->insert([
+                'ad_id'        => $adId,
+                'placement_id' => $placementId,
+                'placement'    => $position,
+            ]);
+        }
+
+        return $this->response->setJSON(['status' => 'ok', 'message' => 'All placements saved.']);
     }
 }

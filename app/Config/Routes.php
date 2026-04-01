@@ -195,6 +195,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'ad
     $routes->get('placements/edit/(:num)', 'AdController::placementEdit/$1');
     $routes->post('placements/update/(:num)', 'AdController::placementUpdate/$1');
     $routes->post('placements/delete/(:num)', 'AdController::placementDelete/$1');
+    $routes->post('placements/save-all', 'AdController::saveAll');
 
     // Settings
     $routes->get('settings', 'SettingsController::index');
