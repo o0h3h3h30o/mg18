@@ -24,7 +24,7 @@ class Lasted extends BaseController
         $data['top_day'] = $this->getTopDay();
         $data['top_month'] = $this->getTopMonth();
         $data['top_all'] = $this->db->query(
-            'SELECT m.id as manga_id, m.name, m.slug, m.view_month as view, m.time_chap_1 FROM manga m ORDER BY m.views DESC LIMIT 10'
+            'SELECT m.id as manga_id, m.name, m.slug, m.views as view, m.time_chap_1 FROM manga m ORDER BY m.views DESC LIMIT 10'
         )->getResult();
 
         $page = (int)($page ?? 0);
