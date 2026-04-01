@@ -83,10 +83,10 @@
                         </td>
                         <td>
                             <?php if ($r->status === 'pending'): ?>
-                                <form action="/admin/reports/resolve/<?= $r->id ?>" method="post" class="d-inline"><?= csrf_field() ?><button class="btn btn-outline-success btn-sm">Resolve</button></form>
-                                <form action="/admin/reports/dismiss/<?= $r->id ?>" method="post" class="d-inline"><?= csrf_field() ?><button class="btn btn-outline-secondary btn-sm">Dismiss</button></form>
+                                <button class="btn btn-outline-success btn-sm" onclick="reportAction('/admin/reports/resolve/<?= $r->id ?>')">Resolve</button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="reportAction('/admin/reports/dismiss/<?= $r->id ?>')">Dismiss</button>
                             <?php endif; ?>
-                            <form action="/admin/reports/delete/<?= $r->id ?>" method="post" class="d-inline" onsubmit="return confirm('Delete?')"><?= csrf_field() ?><button class="btn btn-outline-danger btn-sm">Del</button></form>
+                            <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Delete?')) reportAction('/admin/reports/delete/<?= $r->id ?>')">Del</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -119,4 +119,18 @@
     <small class="text-muted">Page <?= $page ?> / <?= number_format($totalPages) ?></small>
 </nav>
 <?php endif; ?>
+<script>
+function reportAction(url) {
+    var f = document.createElement('form');
+    f.method = 'POST';
+    f.action = url;
+    var t = document.createElement('input');
+    t.type = 'hidden';
+    t.name = '<?= csrf_token() ?>';
+    t.value = '<?= csrf_hash() ?>';
+    f.appendChild(t);
+    document.body.appendChild(f);
+    f.submit();
+}
+</script>
 <?= $this->endSection() ?>
