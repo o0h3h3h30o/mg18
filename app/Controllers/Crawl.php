@@ -193,12 +193,12 @@ class Crawl extends \CodeIgniter\Controller
 
                 $rawdata = $this->fetchImageData($imageUrl, $referer);
                 if ($rawdata) {
-                    file_put_contents($chapterDir . $pageName, $rawdata);
+                    $finalName = $this->saveAndOptimizeImage($rawdata, $chapterDir, $pageName);
                     $this->db->table('page')->where('id', $page->id)->update([
-                        'image'    => $pageName,
+                        'image'    => $finalName,
                         'external' => 0,
                     ]);
-                    echo "  OK: Page {$pageName}\n";
+                    echo "  OK: Page {$finalName}\n";
                 } else {
                     echo "  FAIL: Page {$pageName} ({$imageUrl})\n";
                 }
@@ -668,14 +668,14 @@ class Crawl extends \CodeIgniter\Controller
                 continue;
             }
 
-            // Save image file
-            file_put_contents($chapterDir . $pageName, $imageData);
+            // Save and optimize image
+            $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
 
             // Check if it's a dummy/logo image (height = 300)
-            $info = @getimagesize($chapterDir . $pageName);
+            $info = @getimagesize($chapterDir . $finalName);
             if ($info && $info[1] == 300) {
                 echo "  Skipped logo image (300px height)\n";
-                @unlink($chapterDir . $pageName);
+                @unlink($chapterDir . $finalName);
                 $index++;
                 continue;
             }
@@ -683,7 +683,7 @@ class Crawl extends \CodeIgniter\Controller
             // Insert page record
             $this->db->table('page')->insert([
                 'slug'       => $index,
-                'image'      => $pageName,
+                'image'      => $finalName,
                 'external'   => 0,
                 'chapter_id' => $chapter->id,
                 'created_at' => date('Y-m-d H:i:s'),
@@ -691,7 +691,7 @@ class Crawl extends \CodeIgniter\Controller
             ]);
 
             $successCount++;
-            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$pageName}\n";
+            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
             $index++;
         }
 
@@ -764,14 +764,14 @@ class Crawl extends \CodeIgniter\Controller
                 continue;
             }
 
-            // Save image file
-            file_put_contents($chapterDir . $pageName, $imageData);
+            // Save and optimize image
+            $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
 
             // Skip tiny/logo images by actual size
-            $info = @getimagesize($chapterDir . $pageName);
+            $info = @getimagesize($chapterDir . $finalName);
             if ($info && $info[1] < 100) {
                 echo "  Skipped tiny image ({$info[1]}px height)\n";
-                @unlink($chapterDir . $pageName);
+                @unlink($chapterDir . $finalName);
                 $index++;
                 continue;
             }
@@ -779,7 +779,7 @@ class Crawl extends \CodeIgniter\Controller
             // Insert page record
             $this->db->table('page')->insert([
                 'slug'       => $index,
-                'image'      => $pageName,
+                'image'      => $finalName,
                 'external'   => 0,
                 'chapter_id' => $chapter->id,
                 'created_at' => date('Y-m-d H:i:s'),
@@ -787,7 +787,7 @@ class Crawl extends \CodeIgniter\Controller
             ]);
 
             $successCount++;
-            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$pageName}\n";
+            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
             $index++;
         }
 
@@ -1268,6 +1268,104 @@ class Crawl extends \CodeIgniter\Controller
     /**
      * Fetch raw image data via curl with proxy
      */
+    /**
+     * Save image data to file, optimize if too large (>2MB: compress, >10MB: resize+compress)
+     * Converts to WebP for smaller file size.
+     * Returns final filename (may change extension to .webp)
+     */
+    private function saveAndOptimizeImage(string $imageData, string $savePath, string $filename, int $maxSizeMB = 10): string
+    {
+        $filePath = $savePath . $filename;
+        file_put_contents($filePath, $imageData);
+        $fileSize = strlen($imageData);
+        $sizeMB = $fileSize / (1024 * 1024);
+
+        // Under 2MB: keep original, no processing needed
+        if ($sizeMB < 2) {
+            return $filename;
+        }
+
+        echo "    Image {$filename}: " . round($sizeMB, 1) . "MB - optimizing...\n";
+
+        // Try to process with GD
+        $info = @getimagesize($filePath);
+        if (!$info) {
+            echo "    Cannot read image info, keeping original.\n";
+            return $filename;
+        }
+
+        $mime = $info['mime'] ?? '';
+        $srcImage = null;
+
+        switch ($mime) {
+            case 'image/jpeg':
+                $srcImage = @imagecreatefromjpeg($filePath);
+                break;
+            case 'image/png':
+                $srcImage = @imagecreatefrompng($filePath);
+                break;
+            case 'image/webp':
+                $srcImage = @imagecreatefromwebp($filePath);
+                break;
+            case 'image/gif':
+                // GIF: just keep it, usually small
+                return $filename;
+        }
+
+        if (!$srcImage) {
+            echo "    Cannot create image resource, keeping original.\n";
+            return $filename;
+        }
+
+        $origW = imagesx($srcImage);
+        $origH = imagesy($srcImage);
+        $newW = $origW;
+        $newH = $origH;
+
+        // Over 10MB or width > 2000px: resize down
+        if ($sizeMB > $maxSizeMB || $origW > 2000) {
+            $maxW = 1600;
+            if ($origW > $maxW) {
+                $ratio = $maxW / $origW;
+                $newW = $maxW;
+                $newH = (int) round($origH * $ratio);
+                echo "    Resizing: {$origW}x{$origH} -> {$newW}x{$newH}\n";
+
+                $resized = imagecreatetruecolor($newW, $newH);
+                // Preserve transparency for PNG
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+                imagecopyresampled($resized, $srcImage, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+                imagedestroy($srcImage);
+                $srcImage = $resized;
+            }
+        }
+
+        // Save as WebP (much smaller than PNG/JPEG)
+        $webpName = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
+        $webpPath = $savePath . $webpName;
+
+        // Quality: 2-10MB → 85, >10MB → 75
+        $quality = $sizeMB > $maxSizeMB ? 75 : 85;
+        imagewebp($srcImage, $webpPath, $quality);
+        imagedestroy($srcImage);
+
+        $newSize = filesize($webpPath);
+        $newSizeMB = round($newSize / (1024 * 1024), 2);
+        echo "    Optimized: " . round($sizeMB, 1) . "MB -> {$newSizeMB}MB (WebP q{$quality})\n";
+
+        // Remove original if WebP is smaller
+        if ($newSize < $fileSize) {
+            @unlink($filePath);
+            return $webpName;
+        }
+
+        // WebP not smaller (rare), keep original
+        @unlink($webpPath);
+        echo "    WebP not smaller, keeping original.\n";
+        return $filename;
+    }
+
     private function fetchImageData(string $url, string $referer = ''): string
     {
         $proxy = $this->getRandomProxy();
