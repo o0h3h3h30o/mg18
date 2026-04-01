@@ -97,6 +97,26 @@
 </div>
 
 <script>
+// ====== SHIFT+CLICK RANGE SELECT ======
+var lastChecked = null;
+document.addEventListener('click', function(e) {
+    var cb = e.target.closest('.ch-check, .fetch-check');
+    if (!cb) return;
+    var group = cb.classList.contains('ch-check') ? '.ch-check' : '.fetch-check';
+    if (e.shiftKey && lastChecked && lastChecked.classList.contains(group.substring(1))) {
+        var boxes = Array.from(document.querySelectorAll(group));
+        var start = boxes.indexOf(lastChecked);
+        var end = boxes.indexOf(cb);
+        var min = Math.min(start, end), max = Math.max(start, end);
+        for (var i = min; i <= max; i++) {
+            boxes[i].checked = cb.checked;
+        }
+    }
+    lastChecked = cb;
+    if (group === '.ch-check') updateDeleteCount();
+    else updateImportCount();
+});
+
 // ====== BULK DELETE ======
 function toggleAll(el) {
     document.querySelectorAll('.ch-check').forEach(c => c.checked = el.checked);
@@ -107,7 +127,6 @@ function updateDeleteCount() {
     var count = document.querySelectorAll('.ch-check:checked').length;
     document.getElementById('deleteCount').textContent = count;
     document.getElementById('btnBulkDelete').disabled = count === 0;
-    // Show/hide bulk bar
     document.getElementById('bulkBar').style.display = count > 0 ? 'flex' : 'none';
     document.getElementById('bulkBar').classList.toggle('d-none', count === 0);
 }
