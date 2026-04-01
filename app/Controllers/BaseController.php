@@ -96,6 +96,7 @@ abstract class BaseController extends Controller
 
     protected function getAds(int $placementId): array
     {
+        return []; // DEBUG: tắt tạm ads để debug
         $ads = $this->db->query(
             'SELECT * FROM ad LEFT JOIN ad_placement ON ad_placement.ad_id = ad.id WHERE placement_id = ?',
             [$placementId]
