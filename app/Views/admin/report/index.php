@@ -83,10 +83,10 @@
                         </td>
                         <td>
                             <?php if ($r->status === 'pending'): ?>
-                                <button class="btn btn-outline-success btn-sm" onclick="reportAction('/admin/reports/resolve/<?= $r->id ?>')">Resolve</button>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="reportAction('/admin/reports/dismiss/<?= $r->id ?>')">Dismiss</button>
+                                <a href="/admin/reports/resolve/<?= $r->id ?>" class="btn btn-outline-success btn-sm">Resolve</a>
+                                <a href="/admin/reports/dismiss/<?= $r->id ?>" class="btn btn-outline-secondary btn-sm">Dismiss</a>
                             <?php endif; ?>
-                            <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Delete?')) reportAction('/admin/reports/delete/<?= $r->id ?>')">Del</button>
+                            <a href="/admin/reports/delete/<?= $r->id ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete?')">Del</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

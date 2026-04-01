@@ -174,9 +174,9 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'ad
 
     // Chapter Reports
     $routes->get('reports', 'ReportController::index');
-    $routes->post('reports/resolve/(:num)', 'ReportController::resolve/$1');
-    $routes->post('reports/dismiss/(:num)', 'ReportController::dismiss/$1');
-    $routes->post('reports/delete/(:num)', 'ReportController::delete/$1');
+    $routes->match(['get', 'post'], 'reports/resolve/(:num)', 'ReportController::resolve/$1');
+    $routes->match(['get', 'post'], 'reports/dismiss/(:num)', 'ReportController::dismiss/$1');
+    $routes->match(['get', 'post'], 'reports/delete/(:num)', 'ReportController::delete/$1');
     $routes->post('reports/bulk-resolve', 'ReportController::bulkResolve');
     $routes->post('reports/bulk-dismiss', 'ReportController::bulkDismiss');
 
