@@ -102,6 +102,17 @@ class MangaController extends BaseController
             $slug = url_title($this->request->getPost('name'), '-', true);
         }
 
+        // Rename manga folder on disk if slug changed
+        $oldManga = $this->model->find($id);
+        if ($oldManga && $slug !== $oldManga->slug) {
+            $basePath = config('Manga')->savePath;
+            $oldDir = $basePath . $oldManga->slug;
+            $newDir = $basePath . $slug;
+            if (is_dir($oldDir) && !is_dir($newDir)) {
+                rename($oldDir, $newDir);
+            }
+        }
+
         $updateData = [
             'name'            => trim($this->request->getPost('name')),
             'slug'            => $slug,

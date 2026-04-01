@@ -141,10 +141,27 @@ class ChapterController extends BaseController
         ])) {
             return redirect()->back()->withInput()->with('error', implode('<br>', $this->validator->getErrors()));
         }
+
+        $oldItem = $this->model->find($id);
+        $newSlug = trim($this->request->getPost('slug'));
+
+        // Rename chapter folder on disk if slug changed
+        if ($oldItem && $newSlug !== $oldItem->slug) {
+            $manga = $this->db->table('manga')->where('id', $oldItem->manga_id)->get()->getRow();
+            if ($manga) {
+                $basePath = config('Manga')->savePath . $manga->slug . '/chapters/';
+                $oldDir = $basePath . $oldItem->slug;
+                $newDir = $basePath . $newSlug;
+                if (is_dir($oldDir) && !is_dir($newDir)) {
+                    rename($oldDir, $newDir);
+                }
+            }
+        }
+
         $this->model->update($id, [
             'name'        => trim($this->request->getPost('name')),
             'number'      => trim($this->request->getPost('number')),
-            'slug'        => trim($this->request->getPost('slug')),
+            'slug'        => $newSlug,
             'is_show'     => (int) $this->request->getPost('is_show'),
             'need_login'  => (int) $this->request->getPost('need_login'),
             'source_url'  => trim($this->request->getPost('source_url') ?? ''),
