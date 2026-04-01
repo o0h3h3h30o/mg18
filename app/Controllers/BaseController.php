@@ -42,10 +42,6 @@ abstract class BaseController extends Controller
             if ($user && (!isset($user->status) || $user->status == 1)) {
                 $this->is_logged = 1;
                 $this->user_info = $user;
-                // Ensure JS cookie exists
-                if (!isset($_COOKIE['is_logged'])) {
-                    setcookie('is_logged', '1', time() + (365 * 24 * 3600), '/', '', false, false);
-                }
                 return;
             }
             // Invalid session - clear it
@@ -57,18 +53,12 @@ abstract class BaseController extends Controller
         if ($user) {
             $this->is_logged = 1;
             $this->user_info = $user;
-            if (!isset($_COOKIE['is_logged'])) {
-                setcookie('is_logged', '1', time() + (365 * 24 * 3600), '/', '', false, false);
-            }
             return;
         }
 
-        // Not logged in — clear cookie if present
+        // Not logged in
         $this->is_logged = 0;
         $this->user_info = null;
-        if (isset($_COOKIE['is_logged'])) {
-            setcookie('is_logged', '', time() - 3600, '/', '', false, false);
-        }
     }
 
     /**

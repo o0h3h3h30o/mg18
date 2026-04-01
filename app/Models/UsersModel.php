@@ -65,15 +65,28 @@ class UsersModel extends Model
         $this->update($user->id, ['last_login' => date('Y-m-d H:i:s')]);
 
         // JS-readable cookie for CF-cached pages (not httpOnly)
-        setcookie('is_logged', '1', time() + (365 * 24 * 3600), '/', '', false, false);
+        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
-        // Remember me cookie
+        setcookie('is_logged', '1', [
+            'expires'  => time() + (365 * 24 * 3600),
+            'path'     => '/',
+            'secure'   => $secure,
+            'httponly'  => false,
+            'samesite' => 'Lax',
+        ]);
+
+        // Remember me cookie (30 days)
         if ($remember) {
             $token = bin2hex(random_bytes(32));
-            // Store token in DB
             $this->update($user->id, ['token' => password_hash($token, PASSWORD_BCRYPT)]);
-            $expiry = time() + (7 * 24 * 60 * 60);
-            setcookie('remember_user', $user->id . ':' . $token, $expiry, '/', '', false, true);
+            setcookie('remember_user', $user->id . ':' . $token, [
+                'expires'  => time() + (30 * 24 * 3600),
+                'path'     => '/',
+                'secure'   => $secure,
+                'httponly'  => true,
+                'samesite' => 'Lax',
+            ]);
         }
     }
 
@@ -94,13 +107,43 @@ class UsersModel extends Model
         if (!$user || empty($user->token)) return null;
 
         if (password_verify($token, $user->token)) {
+            // Restore session
             $this->setLoginSession($user, false);
+            // Renew remember cookie with new token (extend 30 days)
+            $this->renewRememberToken($user);
             return $user;
         }
 
         // Invalid token - clear cookie
-        setcookie('remember_user', '', time() - 3600, '/', '', false, true);
+        $this->clearRememberCookie();
         return null;
+    }
+
+    private function renewRememberToken(object $user): void
+    {
+        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+        $token = bin2hex(random_bytes(32));
+        $this->update($user->id, ['token' => password_hash($token, PASSWORD_BCRYPT)]);
+        setcookie('remember_user', $user->id . ':' . $token, [
+            'expires'  => time() + (30 * 24 * 3600),
+            'path'     => '/',
+            'secure'   => $secure,
+            'httponly'  => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+
+    private function clearRememberCookie(): void
+    {
+        setcookie('remember_user', '', [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'secure'   => false,
+            'httponly'  => true,
+            'samesite' => 'Lax',
+        ]);
     }
 
     /**
@@ -117,8 +160,14 @@ class UsersModel extends Model
         }
 
         $session->destroy();
-        setcookie('remember_user', '', time() - 3600, '/', '', false, true);
-        setcookie('is_logged', '', time() - 3600, '/', '', false, false);
+        $this->clearRememberCookie();
+        setcookie('is_logged', '', [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'secure'   => false,
+            'httponly'  => false,
+            'samesite' => 'Lax',
+        ]);
     }
 
     public function getUserById(int $uid): ?object
