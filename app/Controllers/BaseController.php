@@ -101,18 +101,6 @@ abstract class BaseController extends Controller
             [$placementId]
         )->getResult();
 
-        // DEBUG: only for user_id = 1
-        if ($this->is_logged && isset($this->user_info->id) && (int)$this->user_info->id === 1) {
-            echo '<pre style="background:#111;color:#0f0;padding:10px;margin:10px;font-size:12px;">';
-            echo "DEBUG getAds(placementId={$placementId})\n";
-            echo "SQL: SELECT * FROM ad LEFT JOIN ad_placement ON ad_placement.ad_id = ad.id WHERE placement_id = {$placementId}\n";
-            echo "Results: " . count($ads) . " rows\n";
-            foreach ($ads as $ad) {
-                echo "  placement={$ad->placement} | ad_id={$ad->ad_id} | code=" . substr($ad->code, 0, 60) . "...\n";
-            }
-            echo '</pre>';
-        }
-
         $adsList = [];
         foreach ($ads as $ad) {
             $adsList[$ad->placement] = $ad->code;
