@@ -190,10 +190,8 @@ class AdController extends BaseController
         $json = $this->request->getJSON(true);
         $placements = $json['placements'] ?? [];
 
-        // Delete all existing placements
-        $this->db->table('ad_placement')->truncate();
-
-        // Insert new placements
+        // Validate first - collect valid rows before touching DB
+        $validRows = [];
         foreach ($placements as $p) {
             $placementId = (int)($p['placement_id'] ?? 0);
             $position    = $p['placement'] ?? '';
@@ -203,13 +201,29 @@ class AdController extends BaseController
                 continue;
             }
 
-            $this->db->table('ad_placement')->insert([
+            $validRows[] = [
                 'ad_id'        => $adId,
                 'placement_id' => $placementId,
                 'placement'    => $position,
-            ]);
+            ];
         }
 
-        return $this->response->setJSON(['status' => 'ok', 'message' => 'All placements saved.']);
+        if (empty($validRows)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'No valid placements to save. Existing data kept.']);
+        }
+
+        // Use transaction to prevent data loss
+        $this->db->transStart();
+        $this->db->table('ad_placement')->truncate();
+        foreach ($validRows as $row) {
+            $this->db->table('ad_placement')->insert($row);
+        }
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Save failed, data rolled back.']);
+        }
+
+        return $this->response->setJSON(['status' => 'ok', 'message' => count($validRows) . ' placements saved.']);
     }
 }
