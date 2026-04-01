@@ -386,5 +386,25 @@
   </script>
 
 
+<?php if (!empty($is_admin)): ?>
+<div id="adminDebugToggle" style="position:fixed;bottom:8px;left:8px;z-index:99999;">
+  <button onclick="document.getElementById('adminDebugPanel').style.display=document.getElementById('adminDebugPanel').style.display==='none'?'block':'none'" style="background:#222;color:#0f0;border:1px solid #0f0;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;opacity:0.7;">🐛 Debug</button>
+</div>
+<div id="adminDebugPanel" style="display:none;position:fixed;bottom:40px;left:8px;z-index:99999;background:#111;color:#0f0;border:1px solid #333;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:12px;max-width:500px;max-height:400px;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,0.8);">
+  <div style="margin-bottom:6px;color:#ff0;font-weight:bold;">Admin Debug Panel</div>
+  <div><b>IP:</b> <?= service('request')->getServer('REMOTE_ADDR') ?></div>
+  <div><b>X-Real-IP:</b> <?= service('request')->getServer('HTTP_X_REAL_IP') ?? 'N/A' ?></div>
+  <div><b>X-Forwarded-For:</b> <?= service('request')->getServer('HTTP_X_FORWARDED_FOR') ?? 'N/A' ?></div>
+  <div><b>CF-Connecting-IP:</b> <?= service('request')->getServer('HTTP_CF_CONNECTING_IP') ?? 'N/A' ?></div>
+  <div><b>Session ID:</b> <?= session_id() ?: 'N/A' ?></div>
+  <div><b>User:</b> <?= $user_info->username ?? 'N/A' ?> (ID: <?= $user_info->id ?? '?' ?>)</div>
+  <div><b>Render:</b> {elapsed_time}s</div>
+  <div><b>PHP:</b> <?= PHP_VERSION ?></div>
+  <div><b>CI:</b> <?= \CodeIgniter\CodeIgniter::CI_VERSION ?></div>
+  <div><b>Env:</b> <?= ENVIRONMENT ?></div>
+  <div style="margin-top:6px;color:#888;font-size:10px;">Only visible to admin</div>
+</div>
+<?php endif; ?>
+
 </body>
 </html>

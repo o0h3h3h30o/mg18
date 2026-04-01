@@ -129,6 +129,11 @@ abstract class BaseController extends Controller
         return $adsList;
     }
 
+    protected function isAdmin(): bool
+    {
+        return $this->is_logged && $this->user_info && ($this->user_info->role ?? '') === 'admin';
+    }
+
     protected function getCommonData(): array
     {
         return [
@@ -136,6 +141,7 @@ abstract class BaseController extends Controller
             'is_logged'  => $this->is_logged,
             'user_info'  => $this->user_info,
             'cdnUrl'     => config('Manga')->cdnUrl,
+            'is_admin'   => $this->isAdmin(),
         ];
     }
 
