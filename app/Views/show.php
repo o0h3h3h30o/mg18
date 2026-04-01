@@ -178,13 +178,13 @@
               </div>
               <div class="divads" style="">
                <?php if(isset($ads['TOP_LARGE'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_LARGE'] ?></template></div>
+<?=$ads['TOP_LARGE'] ?>
                 <?php } ?>
                 <?php if(isset($ads['TOP_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_1'] ?></template></div>
+<?=$ads['TOP_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['TOP_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_2'] ?></template></div>
+<?=$ads['TOP_SQRE_2'] ?>
                 <?php } ?>
               </div>
               <div class="detail_block detail_chapter">
@@ -233,14 +233,14 @@
               </div>
                <div class="divads" style="">
                 <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_LARGE'] ?></template></div>
+<?=$ads['BOTTOM_LARGE'] ?>
                 <?php } ?>
                 
                 <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_1'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_2'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_2'] ?>
                 <?php } ?>
                 </div>
                 <br>

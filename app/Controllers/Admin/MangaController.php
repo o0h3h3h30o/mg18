@@ -663,7 +663,6 @@ class MangaController extends BaseController
         $this->db->table('author_manga')->where('manga_id', $id)->delete();
         $this->db->table('manga_tag')->where('manga_id', $id)->delete();
         $this->db->table('bookmarks')->where('manga_id', $id)->delete();
-        $this->db->table('reading_history')->where('manga_id', $id)->delete();
 
         // Delete all pages of all chapters
         $chapters = $this->db->table('chapter')->where('manga_id', $id)->get()->getResult();

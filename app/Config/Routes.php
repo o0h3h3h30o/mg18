@@ -38,8 +38,6 @@ $routes->get('profile', 'User::index');
 $routes->get('bookmarks', 'User::bookmarks');
 $routes->get('bookmarks/(:num)', 'User::bookmarks/$1');
 $routes->get('history', 'User::history');
-$routes->get('history/(:num)', 'User::history/$1');
-$routes->post('history/delete', 'User::deleteHistory');
 $routes->get('notification', 'User::notification');
 $routes->get('notification/(:num)', 'User::notification/$1');
 $routes->get('notification/go/(:num)', 'Home::goNotification/$1');

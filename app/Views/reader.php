@@ -70,19 +70,19 @@
               <div class="col-md-12 " >
                 <br>
                 <div class="divads" style="">
-                   <div class="ad-lazy"><template>
+
 <script  async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
 <ins class="eas6a97888e37" data-zoneid="5251336"></ins>
 <script type="module">(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
-</template></div>
+
                   </div>
                 <div class="clear-fix"></div>
                 <div style="display: table;">
                 <?php if(isset($ads['TOP_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_1'] ?></template></div>
+<?=$ads['TOP_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['TOP_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_2'] ?></template></div>
+<?=$ads['TOP_SQRE_2'] ?>
                 <?php } ?>
                 </div>
                 <br>
@@ -289,28 +289,28 @@
               <div class="divads" style="">
                 
                 <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_LARGE'] ?></template></div>
+<?=$ads['BOTTOM_LARGE'] ?>
                 <?php } ?>
                 </div>
                 <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_1'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_2'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_2'] ?>
                 <?php } ?>
 
 
                 <?php if(isset($ads['LEFT_WIDE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['LEFT_WIDE_1'] ?></template></div>
+<?=$ads['LEFT_WIDE_1'] ?>
                 <?php } ?>
                  <?php if(isset($ads['LEFT_WIDE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['LEFT_WIDE_2'] ?></template></div>
+<?=$ads['LEFT_WIDE_2'] ?>
                 <?php } ?>  
                 <?php if(isset($ads['RIGHT_WIDE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_2'] ?></template></div>
+<?=$ads['RIGHT_WIDE_2'] ?>
                 <?php } ?>
                 <?php if(isset($ads['RIGHT_WIDE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_1'] ?></template></div>
+<?=$ads['RIGHT_WIDE_1'] ?>
                 <?php } ?>
               </div>
         </div>

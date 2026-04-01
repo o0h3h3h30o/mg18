@@ -22,41 +22,15 @@
 
               <div class="up-head">
                 <h5><i class="ti-timer"></i> Reading History</h5>
+                <button class="up-action-btn" id="btnClearAll" style="display:none">Clear All</button>
               </div>
 
-              <?php if(!empty($history)): ?>
-              <div class="up-list">
-                <?php foreach ($history as $value): ?>
-                <div class="up-item" data-manga="<?= $value->manga_id ?>">
-                  <a href="/manhwa/<?= $value->manga_slug ?>" class="up-item-cover">
-                    <img src="<?=$cdnUrl?>/manga/<?= $value->manga_slug ?>/cover/cover_thumb_2.webp" alt="">
-                  </a>
-                  <div class="up-item-info">
-                    <a href="/manhwa/<?= $value->manga_slug ?>" class="up-item-name"><?= esc($value->manga_name) ?></a>
-                    <div class="up-item-meta">
-                      <a href="/manhwa/<?= $value->manga_slug ?>/<?= $value->chapter_slug ?>" class="up-meta-chap">Ch. <?= $value->chapter_number ?></a>
-                      <span class="up-meta-tag"><i class="ti-time"></i> <?= time_elapsed_string(date('Y-m-d H:i:s', $value->read_at)) ?></span>
-                    </div>
-                    <a href="/manhwa/<?= $value->manga_slug ?>/<?= $value->chapter_slug ?>" class="up-continue-btn"><i class="ti-control-play"></i> Continue</a>
-                  </div>
-                  <button class="up-item-del btn-delete-history" data-id="<?= $value->manga_id ?>" title="Remove">
-                    <i class="ti-trash"></i>
-                  </button>
-                </div>
-                <?php endforeach; ?>
-              </div>
-              <?php else: ?>
-              <div class="up-empty">
+              <div id="historyList" class="up-list" style="display:none"></div>
+
+              <div id="historyEmpty" class="up-empty" style="display:none">
                 <i class="ti-timer" style="font-size:40px;margin-bottom:12px;opacity:.3;"></i>
                 <p>No reading history yet. Start reading!</p>
               </div>
-              <?php endif; ?>
-
-              <?php if(($total_pages ?? 0) > 1): ?>
-              <div class="section_pagination">
-                <?= view('pager/segment_pager', ['current_page' => $current_page, 'total_pages' => $total_pages, 'base_url' => $base_url]) ?>
-              </div>
-              <?php endif; ?>
 
             </div>
           </div>
@@ -68,26 +42,88 @@
   <?php include APPPATH . 'Views/include/user_page_styles.php'; ?>
 
 <script>
-$(document).ready(function(){
-  $('.btn-delete-history').click(function(){
-    if(!confirm('Remove from history?')) return;
-    var btn = $(this);
-    var mangaId = btn.data('id');
-    $.ajax({
-      type: "POST",
-      url: '/history/delete',
-      data: { manga_id: mangaId },
-      dataType: 'json',
-      success: function(result){
-        if(result.status == 1){
-          btn.closest('.up-item').css({transition:'all .3s',opacity:0,transform:'translateX(20px)'});
-          setTimeout(function(){ btn.closest('.up-item').remove(); }, 300);
-        } else {
-          alert(result.message || 'Error');
-        }
-      }
-    });
+(function(){
+  var cdnUrl = '<?= esc($cdnUrl, 'js') ?>';
+  var h = {};
+  try { h = JSON.parse(localStorage.getItem('reading_history') || '{}'); } catch(e){}
+
+  var keys = Object.keys(h);
+  if (!keys.length) {
+    document.getElementById('historyEmpty').style.display = '';
+    return;
+  }
+
+  // Sort by time desc
+  keys.sort(function(a, b){ return (h[b].time || 0) - (h[a].time || 0); });
+
+  var list = document.getElementById('historyList');
+  var html = '';
+  keys.forEach(function(mangaId){
+    var d = h[mangaId];
+    var ago = timeAgo(d.time);
+    html += '<div class="up-item" data-manga="' + mangaId + '">'
+      + '<a href="/manhwa/' + d.slug + '" class="up-item-cover">'
+      + '<img src="' + cdnUrl + '/manga/' + d.slug + '/cover/cover_thumb_2.webp" alt="">'
+      + '</a>'
+      + '<div class="up-item-info">'
+      + '<a href="/manhwa/' + d.slug + '" class="up-item-name">' + escHtml(d.name) + '</a>'
+      + '<div class="up-item-meta">'
+      + '<a href="/manhwa/' + d.slug + '/' + d.chapter_slug + '" class="up-meta-chap">' + escHtml(d.chapter_name) + '</a>'
+      + '<span class="up-meta-tag"><i class="ti-time"></i> ' + ago + '</span>'
+      + '</div>'
+      + '<a href="/manhwa/' + d.slug + '/' + d.chapter_slug + '" class="up-continue-btn"><i class="ti-control-play"></i> Continue</a>'
+      + '</div>'
+      + '<button class="up-item-del btn-delete-history" data-id="' + mangaId + '" title="Remove"><i class="ti-trash"></i></button>'
+      + '</div>';
   });
-});
+  list.innerHTML = html;
+  list.style.display = '';
+  document.getElementById('btnClearAll').style.display = '';
+
+  // Delete single
+  list.addEventListener('click', function(e){
+    var btn = e.target.closest('.btn-delete-history');
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    var item = btn.closest('.up-item');
+    item.style.transition = 'all .3s';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(20px)';
+    setTimeout(function(){ item.remove(); }, 300);
+    try {
+      var data = JSON.parse(localStorage.getItem('reading_history') || '{}');
+      delete data[id];
+      localStorage.setItem('reading_history', JSON.stringify(data));
+      if (!Object.keys(data).length) {
+        list.style.display = 'none';
+        document.getElementById('btnClearAll').style.display = 'none';
+        document.getElementById('historyEmpty').style.display = '';
+      }
+    } catch(e){}
+  });
+
+  // Clear all
+  document.getElementById('btnClearAll').addEventListener('click', function(){
+    if (!confirm('Clear all reading history?')) return;
+    localStorage.removeItem('reading_history');
+    list.innerHTML = '';
+    list.style.display = 'none';
+    this.style.display = 'none';
+    document.getElementById('historyEmpty').style.display = '';
+  });
+
+  function timeAgo(ts) {
+    var s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  }
+  function escHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+})();
 </script>
 <?php include APPPATH . 'Views/include/footer.php'; ?>

@@ -81,10 +81,10 @@
               </div>
               <?php } ?>
                <?php if(isset($ads['RIGHT_WIDE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_1'] ?></template></div>
+<?=$ads['RIGHT_WIDE_1'] ?>
                 <?php } ?>
                  <?php if(isset($ads['RIGHT_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_SQRE_1'] ?></template></div>
+<?=$ads['RIGHT_SQRE_1'] ?>
                 <?php } ?>
               <div class="mg_block mg_rank">
                 <div class="rank_tab">
@@ -159,21 +159,21 @@
                 </div>
               </div>
                <?php if(isset($ads['RIGHT_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_SQRE_2'] ?></template></div>
+<?=$ads['RIGHT_SQRE_2'] ?>
                 <?php } ?>
                 <?php if(isset($ads['RIGHT_WIDE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['RIGHT_WIDE_2'] ?></template></div>
+<?=$ads['RIGHT_WIDE_2'] ?>
                 <?php } ?>
             </div>
             <div class="col-md-8 col-sm-12 col-xs-12">
                 <?php if(isset($ads['TOP_LARGE'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_LARGE'] ?></template></div>
+<?=$ads['TOP_LARGE'] ?>
                 <?php } ?>
                 <?php if(isset($ads['TOP_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_1'] ?></template></div>
+<?=$ads['TOP_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['TOP_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['TOP_SQRE_2'] ?></template></div>
+<?=$ads['TOP_SQRE_2'] ?>
                 <?php } ?>
               <div class="section_title">
                 <h5>Lastest Update</h5>
@@ -239,14 +239,14 @@
               </div>
 
                <?php if(isset($ads['BOTTOM_LARGE'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_LARGE'] ?></template></div>
+<?=$ads['BOTTOM_LARGE'] ?>
               <?php } ?>
             
                 <?php if(isset($ads['BOTTOM_SQRE_1'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_1'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_1'] ?>
                 <?php } ?>
                 <?php if(isset($ads['BOTTOM_SQRE_2'])){ ?>
-<div class="ad-lazy"><template><?=$ads['BOTTOM_SQRE_2'] ?></template></div>
+<?=$ads['BOTTOM_SQRE_2'] ?>
                 <?php } ?>
             </div>
             

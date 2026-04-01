@@ -42,9 +42,10 @@
                     <span class="pf-stat-label">Bookmarks</span>
                   </a>
                   <a href="/history" class="pf-stat">
-                    <span class="pf-stat-num"><?= number_format($stats['history']) ?></span>
+                    <span class="pf-stat-num" id="historyCount">0</span>
                     <span class="pf-stat-label">Read</span>
                   </a>
+                  <script>try{document.getElementById('historyCount').textContent=Object.keys(JSON.parse(localStorage.getItem('reading_history')||'{}')).length}catch(e){}</script>
                   <a class="pf-stat">
                     <span class="pf-stat-num"><?= number_format($stats['comments']) ?></span>
                     <span class="pf-stat-label">Comments</span>

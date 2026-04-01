@@ -39,56 +39,22 @@ class User extends BaseController
         $data['stats'] = [
             'bookmarks' => $this->db->table('bookmarks')->where('user_id', $this->user_info->id)->countAllResults(),
             'comments'  => $this->db->table('comments')->where('user_id', $this->user_info->id)->countAllResults(),
-            'history'   => $this->db->table('reading_history')->where('user_id', $this->user_info->id)->countAllResults(),
+            'history'   => 0, // counted client-side from localStorage
         ];
 
         return view('profile', $data);
     }
 
-    public function history($page = null)
+    public function history()
     {
         $data = $this->getCommonData();
-        $page = (int)($page ?? 0);
-        $offset = max(($page * 20) - 20, 0);
 
         $data['heading_title'] = 'Reading History - Manga18';
         $data['seo_title'] = 'Reading History';
         $data['seo_description'] = 'Your reading history';
         $data['seo_keyword'] = 'reading history manga18';
 
-        $total = $this->db->table('reading_history')
-            ->where('user_id', $this->user_info->id)
-            ->countAllResults();
-
-        $history = $this->db->table('reading_history h')
-            ->select('h.*, m.name as manga_name, m.slug as manga_slug,
-                      c.name as chapter_name, c.number as chapter_number, c.slug as chapter_slug')
-            ->join('manga m', 'm.id = h.manga_id')
-            ->join('chapter c', 'c.id = h.chapter_id')
-            ->where('h.user_id', $this->user_info->id)
-            ->orderBy('h.read_at', 'DESC')
-            ->limit(20, $offset)
-            ->get()->getResult();
-
-        $data['history'] = $history;
-        $data['current_page'] = max($page, 1);
-        $data['total_pages'] = (int) ceil($total / 20);
-        $data['base_url'] = '/history/';
-
         return view('history', $data);
-    }
-
-    public function deleteHistory()
-    {
-        $mangaId = (int) $this->request->getPost('manga_id');
-        if ($mangaId > 0) {
-            $this->db->table('reading_history')
-                ->where('user_id', $this->user_info->id)
-                ->where('manga_id', $mangaId)
-                ->delete();
-            return $this->response->setJSON(['status' => 1]);
-        }
-        return $this->response->setJSON(['status' => 0, 'message' => 'Invalid manga']);
     }
 
     public function notification($page = null)

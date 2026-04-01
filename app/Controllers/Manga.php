@@ -92,16 +92,6 @@ class Manga extends BaseController
         )->getRow()->total;
         $data['total_bookmarks'] = $total_bookmarks;
 
-        // Get last read chapter for logged-in user
-        $data['last_read'] = null;
-        if ($this->is_logged == 1) {
-            $data['last_read'] = $this->db->table('reading_history h')
-                ->select('h.chapter_id, c.number as chapter_number, c.slug as chapter_slug, h.read_at')
-                ->join('chapter c', 'c.id = h.chapter_id')
-                ->where('h.user_id', $this->user_info->id)
-                ->where('h.manga_id', $manga_info->id)
-                ->get()->getRow();
-        }
 
         $data['manga_info'] = $manga_info;
 
@@ -492,40 +482,6 @@ class Manga extends BaseController
                 ->where('slug', $chapterSlug)
                 ->set('view', '`view` + 1', false)
                 ->update();
-        }
-
-        // Save reading history for logged-in users
-        if ($this->is_logged == 1) {
-            $chapter = null;
-            if ($chapterSlug) {
-                $chapter = $this->db->table('chapter')
-                    ->select('id')
-                    ->where('manga_id', $mangaId)
-                    ->where('slug', $chapterSlug)
-                    ->get()->getRow();
-            }
-            if ($chapter) {
-                $exists = $this->db->table('reading_history')
-                    ->where('user_id', $this->user_info->id)
-                    ->where('manga_id', $mangaId)
-                    ->countAllResults();
-                if ($exists) {
-                    $this->db->table('reading_history')
-                        ->where('user_id', $this->user_info->id)
-                        ->where('manga_id', $mangaId)
-                        ->update([
-                            'chapter_id' => $chapter->id,
-                            'read_at'    => time(),
-                        ]);
-                } else {
-                    $this->db->table('reading_history')->insert([
-                        'user_id'    => $this->user_info->id,
-                        'manga_id'   => $mangaId,
-                        'chapter_id' => $chapter->id,
-                        'read_at'    => time(),
-                    ]);
-                }
-            }
         }
 
         return $this->response->setJSON(['status' => 1]);
