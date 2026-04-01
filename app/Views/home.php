@@ -218,7 +218,7 @@
                     .rc-user-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
                     .rc-username{font-weight:700;color:#e8e8e8;font-size:13px}
                     .rc-time{font-size:11px;color:#666}
-                    .rc-text{font-size:13px;color:#aab;line-height:1.5;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+                    .rc-text{font-size:13px;color:#aab;line-height:1.5;word-break:break-word}
                     </style>
                     <script>
                     (function(){
