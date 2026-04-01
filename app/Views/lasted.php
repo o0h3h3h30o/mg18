@@ -214,8 +214,32 @@
                         
                       </div>
                     </div>
-                    <div id="top_week" class="tab-pane fade in">
-                      <div class="erros_text">Chưa có dữ liệu</div>
+                    <div id="top_all" class="tab-pane fade in">
+                       <div class="manga_box story_box">
+                        <?php if(isset($top_all) && count($top_all)>0){ ?>
+                        <?php foreach ($top_all as $key => $value) { ?>
+                        <div class="item">
+                          <div class="mg-item_hoz">
+                            <p class="mg_ranking-no"># <span><?=$key+1?></span></p>
+                            <div class="story_item">
+                              <div class="story_images">
+                                <a href="#" title=""><img src="<?=$cdnUrl?>/manga/<?=$value->slug?>/cover/cover_thumb.jpg" alt="" class="img-responsive"></a>
+                              </div>
+                              <div class="mg_info">
+                                <div class="mg_name" style="text-transform: capitalize;">
+                                  <a href="<?=base_url()?>manhwa/<?=$value->slug?>"><?=strtolower($value->name)?></a>
+                                </div>
+                                <div class="mg_chapter">
+                                  <div class="item">
+                                    <div class="chapter_view"><span class="lnr lnr-eye"></span> <span><?=number_format($value->view)?></span></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <?php }} ?>
+                      </div>
                     </div>
                     <div id="top_day" class="tab-pane active fade in">
                        <div class="manga_box story_box">

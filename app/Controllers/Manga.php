@@ -58,6 +58,10 @@ class Manga extends BaseController
         $manga_info->total_rate = $ratingInfo->total ?? 0;
 
         $data['top_day'] = $this->getTopDay();
+        $data['top_month'] = $this->getTopMonth();
+        $data['top_all'] = $this->db->query(
+            'SELECT m.id as manga_id, m.name, m.slug, m.view_month as view, m.time_chap_1 FROM manga m ORDER BY m.views DESC LIMIT 10'
+        )->getResult();
 
         // SEO
         $data['heading_title'] = $manga_info->name . ' Manga - Read Manga, Hentai 18+ For Free at Manga18.club';
