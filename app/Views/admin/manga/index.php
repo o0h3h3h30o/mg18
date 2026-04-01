@@ -21,7 +21,7 @@
                     <td><?= $m->id ?></td>
                     <td><img src="<?= $cdnUrl ?>/manga/<?= $m->slug ?>/cover/cover_thumb.jpg" alt="" style="width:45px;height:60px;object-fit:cover;border-radius:4px;"></td>
                     <td>
-                        <a href="/admin/manga/edit/<?= $m->id ?>"><?= esc(mb_substr($m->name, 0, 50)) ?></a>
+                        <a href="/admin/chapters/<?= $m->id ?>"><?= esc(mb_substr($m->name, 0, 50)) ?></a>
                         <?php if ($m->hot): ?><span class="badge bg-danger">HOT</span><?php endif; ?>
                     </td>
                     <td><?= esc($m->type_label ?? '-') ?></td>
