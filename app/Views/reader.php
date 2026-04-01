@@ -284,7 +284,7 @@
                         ?>
                   </div>
                   <div id="tab_disq_cmt" class="tab-pane fade in">
-                    <div id="easyComment_Content_reader"></div>
+                    <div id="easyComment_Content"></div>
                     <script type="text/javascript">
                       var easyComment_ContentID = document.title;
                       var easyComment_Language = 'en';
