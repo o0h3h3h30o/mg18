@@ -402,6 +402,7 @@
   <div><b>PHP:</b> <?= PHP_VERSION ?></div>
   <div><b>CI:</b> <?= \CodeIgniter\CodeIgniter::CI_VERSION ?></div>
   <div><b>Env:</b> <?= ENVIRONMENT ?></div>
+  <div><b>Server Time:</b> <?= date('Y-m-d H:i:s T') ?> (<?= date_default_timezone_get() ?>)</div>
   <div style="margin-top:6px;color:#888;font-size:10px;">Only visible to admin</div>
 </div>
 <?php endif; ?>
