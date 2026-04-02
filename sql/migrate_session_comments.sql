@@ -12,7 +12,6 @@ ALTER TABLE ci_sessions MODIFY id varchar(256) NOT NULL;
 
 -- Add PRIMARY KEY on id (CI4 requires it)
 -- Drop existing key if any, then add PK
-ALTER TABLE ci_sessions DROP PRIMARY KEY;
 ALTER TABLE ci_sessions ADD PRIMARY KEY (id);
 
 -- Ensure timestamp index exists

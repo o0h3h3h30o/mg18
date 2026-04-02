@@ -65,13 +65,10 @@ class UsersModel extends Model
         $this->update($user->id, ['last_login' => date('Y-m-d H:i:s')]);
 
         // JS-readable cookie for CF-cached pages (not httpOnly)
-        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-
         setcookie('is_logged', '1', [
             'expires'  => time() + (365 * 24 * 3600),
             'path'     => '/',
-            'secure'   => $secure,
+            'secure'   => false,
             'httponly'  => false,
             'samesite' => 'Lax',
         ]);
@@ -83,10 +80,11 @@ class UsersModel extends Model
             setcookie('remember_user', $user->id . ':' . $token, [
                 'expires'  => time() + (30 * 24 * 3600),
                 'path'     => '/',
-                'secure'   => $secure,
+                'secure'   => false,
                 'httponly'  => true,
                 'samesite' => 'Lax',
             ]);
+            log_message('info', 'Remember cookie set for user #' . $user->id);
         }
     }
 
@@ -121,18 +119,16 @@ class UsersModel extends Model
 
     private function renewRememberToken(object $user): void
     {
-        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-
         $token = bin2hex(random_bytes(32));
         $this->update($user->id, ['token' => password_hash($token, PASSWORD_BCRYPT)]);
         setcookie('remember_user', $user->id . ':' . $token, [
             'expires'  => time() + (30 * 24 * 3600),
             'path'     => '/',
-            'secure'   => $secure,
+            'secure'   => false, // Behind reverse proxy, HTTPS not reliably detected
             'httponly'  => true,
             'samesite' => 'Lax',
         ]);
+        log_message('info', 'Remember cookie renewed for user #' . $user->id);
     }
 
     private function clearRememberCookie(): void
