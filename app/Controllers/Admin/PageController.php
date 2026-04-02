@@ -305,6 +305,129 @@ class PageController extends BaseController
         return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('success', "All {$count} pages deleted.");
     }
 
+    /**
+     * AJAX: Download external image to local storage
+     */
+    public function downloadExternal($pageId)
+    {
+        $page = $this->db->table('page')->where('id', $pageId)->get()->getRow();
+        if (!$page || !$page->external) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Page not found or not external']);
+        }
+
+        $chapter = $this->db->table('chapter')->where('id', $page->chapter_id)->get()->getRow();
+        $manga = $this->db->table('manga')->where('id', $chapter->manga_id)->get()->getRow();
+
+        $url = $page->image;
+
+        // Download image with curl
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            CURLOPT_REFERER        => parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST) . '/',
+        ]);
+        $imageData = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if (!$imageData || $httpCode !== 200) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Download failed: ' . ($error ?: "HTTP {$httpCode}")]);
+        }
+
+        // Determine extension from content type or URL
+        $ext = 'jpg';
+        if (str_contains($contentType, 'png')) $ext = 'png';
+        elseif (str_contains($contentType, 'webp')) $ext = 'webp';
+        elseif (str_contains($contentType, 'gif')) $ext = 'gif';
+        else {
+            $urlExt = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+            if (in_array($urlExt, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                $ext = $urlExt === 'jpeg' ? 'jpg' : $urlExt;
+            }
+        }
+
+        // Save to local
+        $uploadDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $chapter->slug;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = $page->slug . '.' . $ext;
+
+        // Optimize if needed (same logic as crawler)
+        $finalFilename = $this->saveAndOptimize($imageData, $uploadDir, $filename);
+
+        // Update page record
+        $this->db->table('page')->where('id', $pageId)->update([
+            'image'    => $finalFilename,
+            'external' => 0,
+        ]);
+
+        $imgUrl = config('Manga')->cdnUrl . '/manga/' . $manga->slug . '/chapters/' . $chapter->slug . '/' . $finalFilename;
+
+        return $this->response->setJSON([
+            'status'  => 1,
+            'msg'     => 'Downloaded & saved locally',
+            'img_url' => $imgUrl,
+            'image'   => $finalFilename,
+        ]);
+    }
+
+    /**
+     * Save image data with optional optimization
+     */
+    private function saveAndOptimize(string $imageData, string $dir, string $filename): string
+    {
+        $size = strlen($imageData);
+
+        // Under 300KB: save as-is
+        if ($size < 300 * 1024) {
+            file_put_contents($dir . '/' . $filename, $imageData);
+            return $filename;
+        }
+
+        // Try to optimize with GD
+        $src = @imagecreatefromstring($imageData);
+        if (!$src) {
+            file_put_contents($dir . '/' . $filename, $imageData);
+            return $filename;
+        }
+
+        $w = imagesx($src);
+        $h = imagesy($src);
+
+        // Resize if width > 1200
+        if ($w > 1200) {
+            $newW = 1200;
+            $newH = (int) round($h * (1200 / $w));
+            $dst = imagecreatetruecolor($newW, $newH);
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
+            imagedestroy($src);
+            $src = $dst;
+        }
+
+        // Save as WebP with progressive quality
+        $webpName = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
+        $webpPath = $dir . '/' . $webpName;
+
+        foreach ([85, 75, 65, 50] as $quality) {
+            imagewebp($src, $webpPath, $quality);
+            if (filesize($webpPath) < 1024 * 1024) {
+                imagedestroy($src);
+                return $webpName;
+            }
+        }
+
+        imagedestroy($src);
+        return $webpName;
+    }
+
     public function deleteBatch()
     {
         $pageIds = $this->request->getPost('page_ids');

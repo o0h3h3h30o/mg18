@@ -134,6 +134,7 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'ad
     $routes->post('pages/delete/(:num)', 'PageController::delete/$1');
     $routes->post('pages/delete-all/(:num)', 'PageController::deleteAll/$1');
     $routes->post('pages/delete-batch', 'PageController::deleteBatch');
+    $routes->post('pages/download-external/(:num)', 'PageController::downloadExternal/$1');
 
     // Tags
     $routes->get('tags', 'TagController::index');

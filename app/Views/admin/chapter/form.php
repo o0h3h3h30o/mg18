@@ -198,6 +198,15 @@ https://example.com/image3.jpg" required></textarea>
     <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Chapter Images (<?= count($pages) ?> pages)</strong>
         <div>
+            <?php
+                $extCount = 0;
+                foreach ($pages as $pg) { if ($pg->external) $extCount++; }
+            ?>
+            <?php if ($extCount > 0): ?>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="downloadAllExternal()" id="btnDownloadAll">
+                <i class="bi bi-cloud-arrow-down"></i> Download All External (<span id="extCount"><?= $extCount ?></span>)
+            </button>
+            <?php endif; ?>
             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleSelectAll()">Select All</button>
             <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSelected()" id="btnDeleteSelected" disabled>Delete Selected (<span id="selectedCount">0</span>)</button>
             <form action="/admin/pages/delete-all/<?= $item->id ?>" method="post" class="d-inline" onsubmit="return confirm('DELETE ALL <?= count($pages) ?> pages? This cannot be undone!')">
@@ -216,8 +225,16 @@ https://example.com/image3.jpg" required></textarea>
                     <div class="col-6 col-md-3 col-lg-2 text-center">
                         <div class="border rounded p-1 position-relative page-item" data-id="<?= $p->id ?>">
                             <input type="checkbox" name="page_ids[]" value="<?= $p->id ?>" class="form-check-input position-absolute page-checkbox" style="top:5px;left:5px;z-index:1;" onchange="updateSelectedCount()">
-                            <img src="<?= esc($imgSrc) ?>" class="img-fluid" style="max-height:200px;cursor:pointer;" loading="lazy" onclick="this.closest('.page-item').querySelector('.page-checkbox').click()">
-                            <small class="d-block mt-1 text-muted">#<?= $p->slug ?> <?= $p->external ? '<span class="badge bg-info">ext</span>' : '' ?></small>
+                            <img src="<?= esc($imgSrc) ?>" class="img-fluid" style="max-height:200px;cursor:pointer;" loading="lazy" onclick="this.closest('.page-item').querySelector('.page-checkbox').click()" onerror="this.style.border='2px solid red';this.style.minHeight='80px';">
+                            <small class="d-block mt-1 text-muted">
+                                #<?= $p->slug ?>
+                                <?php if ($p->external): ?>
+                                    <span class="badge bg-info">ext</span>
+                                    <button type="button" class="btn btn-outline-success btn-sm py-0 px-1 ms-1" style="font-size:10px;" onclick="event.stopPropagation();downloadExternal(<?= $p->id ?>, this)" title="Download to local">
+                                        <i class="bi bi-cloud-arrow-down"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </small>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -246,6 +263,73 @@ function deleteSelected() {
     if (count && confirm('Delete ' + count + ' selected pages?')) {
         document.getElementById('batchDeleteForm').submit();
     }
+}
+
+var csrfToken = '<?= csrf_token() ?>';
+var csrfHashPages = '<?= csrf_hash() ?>';
+
+async function downloadExternal(pageId, btn) {
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span>';
+
+    try {
+        var fd = new FormData();
+        fd.append(csrfToken, csrfHashPages);
+
+        var res = await fetch('/admin/pages/download-external/' + pageId, {method:'POST', body:fd});
+        var json = await res.json();
+        if (json.csrf_hash) csrfHashPages = json.csrf_hash;
+
+        if (json.status === 1) {
+            // Update image src and remove ext badge + button
+            var pageItem = btn.closest('.page-item');
+            var img = pageItem.querySelector('img');
+            img.src = json.img_url;
+            img.style.border = '';
+            var badge = pageItem.querySelector('.badge.bg-info');
+            if (badge) badge.remove();
+            btn.remove();
+            // Update external count
+            var extSpan = document.getElementById('extCount');
+            if (extSpan) {
+                var c = parseInt(extSpan.textContent) - 1;
+                extSpan.textContent = c;
+                if (c <= 0) {
+                    var dlBtn = document.getElementById('btnDownloadAll');
+                    if (dlBtn) dlBtn.remove();
+                }
+            }
+        } else {
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i>';
+            btn.title = json.msg;
+            btn.disabled = false;
+        }
+    } catch(e) {
+        btn.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i>';
+        btn.title = e.message;
+        btn.disabled = false;
+    }
+}
+
+async function downloadAllExternal() {
+    var btns = document.querySelectorAll('.page-item .btn-outline-success');
+    if (!btns.length) return;
+    if (!confirm('Download ' + btns.length + ' external images to local? This may take a while.')) return;
+
+    var dlAllBtn = document.getElementById('btnDownloadAll');
+    if (dlAllBtn) dlAllBtn.disabled = true;
+
+    for (var i = 0; i < btns.length; i++) {
+        var btn = btns[i];
+        var pageId = btn.getAttribute('onclick').match(/downloadExternal\((\d+)/);
+        if (pageId) {
+            await downloadExternal(parseInt(pageId[1]), btn);
+            // Small delay between requests
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+    if (dlAllBtn) dlAllBtn.disabled = false;
 }
 </script>
 <?php else: ?>
