@@ -148,7 +148,7 @@ HTML;
             $user = (new UsersModel())->find((int) $session->get('user_id'));
             return $user && ($user->role ?? '') === 'admin';
         }
-        $user = (new UsersModel())->checkRememberMe();
-        return $user && ($user->role ?? '') === 'admin';
+        // Don't call checkRememberMe() here - it's already handled by AdminFilter/BaseController
+        return false;
     }
 }
