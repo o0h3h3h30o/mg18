@@ -85,6 +85,7 @@ $routes->cli('crawl/index', 'Crawl::index');
 $routes->cli('crawl/crawlChapter', 'Crawl::crawlChapter');
 $routes->cli('crawl/crawlChapter2', 'Crawl::crawlChapter2');
 $routes->cli('crawl/mangadistrict', 'Crawl::mangadistrict');
+$routes->cli('crawl/resetView', 'Crawl::resetView');
 
 // Admin panel
 $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'admin'], static function ($routes) {
