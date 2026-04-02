@@ -179,6 +179,8 @@ class Crawl extends \CodeIgniter\Controller
             // Prepare directory
             $chapterDir = $this->savePath . $manga->slug . '/chapters/' . $item->slug . '/';
             @mkdir($chapterDir, 0755, true);
+            @chown($chapterDir, 'www');
+            @chgrp($chapterDir, 'www');
 
             foreach ($pages as $page) {
                 $imageUrl = $page->image;
@@ -1274,8 +1276,16 @@ class Crawl extends \CodeIgniter\Controller
      */
     private function saveAndOptimizeImage(string $imageData, string $savePath, string $filename): string
     {
+        // Ensure directory exists with proper permissions
+        if (!is_dir($savePath)) {
+            @mkdir($savePath, 0755, true);
+            @chown($savePath, 'www');
+            @chgrp($savePath, 'www');
+        }
+
         $filePath = $savePath . $filename;
         file_put_contents($filePath, $imageData);
+        @chmod($filePath, 0644);
         $fileSize = strlen($imageData);
         $sizeKB = $fileSize / 1024;
 
@@ -1339,6 +1349,7 @@ class Crawl extends \CodeIgniter\Controller
         // Use WebP if it's smaller than original
         if ($newSize < $fileSize) {
             @unlink($filePath);
+            @chmod($webpPath, 0644);
             echo "    Saved: " . round($sizeKB) . "KB -> " . round($newSize / 1024) . "KB\n";
             return $webpName;
         }
@@ -1382,6 +1393,8 @@ class Crawl extends \CodeIgniter\Controller
     {
         $coverDir = $this->savePath . $slug . '/cover/';
         @mkdir($coverDir, 0755, true);
+        @chown($coverDir, 'www');
+        @chgrp($coverDir, 'www');
 
         $imageData = $this->fetchImageData($imageUrl, $referer);
         if (!$imageData) return;
@@ -1399,6 +1412,11 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         @unlink($tmpFile);
+
+        // Fix permissions for web server
+        foreach (glob($coverDir . '*') as $f) {
+            @chmod($f, 0644);
+        }
     }
 
 
