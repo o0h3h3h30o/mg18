@@ -115,7 +115,7 @@ class PageController extends BaseController
         }
 
         // Destination directory
-        $uploadDir = FCPATH . 'manga/' . $manga->slug . '/chapters/' . $chapter->slug;
+        $uploadDir = config('Manga')->savePath . $manga->slug . '/chapters/' . $chapter->slug;
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
