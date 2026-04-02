@@ -105,15 +105,14 @@ class UsersModel extends Model
         if (!$user || empty($user->token)) return null;
 
         if (password_verify($token, $user->token)) {
-            // Restore session
+            // Restore session only, keep same remember token
             $this->setLoginSession($user, false);
-            // Renew remember cookie with new token (extend 30 days)
-            $this->renewRememberToken($user);
+            log_message('info', 'Remember me restored session for user #' . $user->id);
             return $user;
         }
 
-        // Invalid token - clear cookie
-        $this->clearRememberCookie();
+        // Invalid token - just log, don't clear cookie (could be race condition)
+        log_message('warning', 'Remember me token mismatch for user #' . $userId);
         return null;
     }
 
