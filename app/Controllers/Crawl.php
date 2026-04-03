@@ -1299,6 +1299,18 @@ class Crawl extends \CodeIgniter\Controller
         if (!$info) return $filename;
 
         $mime = $info['mime'] ?? '';
+        $origW = $info[0];
+        $origH = $info[1];
+
+        // Check memory: estimate width * height * 4 bytes * 2 (src + dst)
+        $estimatedMemory = $origW * $origH * 4 * 2;
+        $memoryLimit = (int) ini_get('memory_limit') * 1024 * 1024;
+        $memoryAvailable = $memoryLimit - memory_get_usage(true);
+        if ($estimatedMemory > $memoryAvailable * 0.8) {
+            echo "    Image {$filename}: too large for GD ({$origW}x{$origH}), skipping optimize\n";
+            return $filename;
+        }
+
         $srcImage = null;
 
         switch ($mime) {
@@ -1309,9 +1321,6 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         if (!$srcImage) return $filename;
-
-        $origW = imagesx($srcImage);
-        $origH = imagesy($srcImage);
 
         echo "    Image {$filename}: " . round($sizeKB) . "KB ({$origW}x{$origH}) - optimizing...\n";
 

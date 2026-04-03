@@ -392,15 +392,31 @@ class PageController extends BaseController
             return $filename;
         }
 
-        // Try to optimize with GD
-        $src = @imagecreatefromstring($imageData);
-        if (!$src) {
-            file_put_contents($dir . '/' . $filename, $imageData);
+        // Save original first
+        file_put_contents($dir . '/' . $filename, $imageData);
+
+        // Check if image is too large for GD (estimate: width * height * 4 bytes per pixel)
+        $info = @getimagesizefromstring($imageData);
+        if (!$info) {
             return $filename;
         }
 
-        $w = imagesx($src);
-        $h = imagesy($src);
+        $w = $info[0];
+        $h = $info[1];
+        $estimatedMemory = $w * $h * 4 * 2; // x2 for src + dst
+        $memoryLimit = (int) ini_get('memory_limit') * 1024 * 1024;
+        $memoryAvailable = $memoryLimit - memory_get_usage(true);
+
+        if ($estimatedMemory > $memoryAvailable * 0.8) {
+            // Too large for GD, keep original
+            return $filename;
+        }
+
+        // Try to optimize with GD
+        $src = @imagecreatefromstring($imageData);
+        if (!$src) {
+            return $filename;
+        }
 
         // Resize if width > 1200
         if ($w > 1200) {
@@ -420,12 +436,15 @@ class PageController extends BaseController
             imagewebp($src, $webpPath, $quality);
             if (filesize($webpPath) < 1024 * 1024) {
                 imagedestroy($src);
+                @unlink($dir . '/' . $filename); // Remove original
                 return $webpName;
             }
         }
 
         imagedestroy($src);
-        return $webpName;
+        // WebP still too large, keep original
+        @unlink($webpPath);
+        return $filename;
     }
 
     public function deleteBatch()
