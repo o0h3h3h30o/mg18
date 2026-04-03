@@ -377,8 +377,10 @@ class Home extends BaseController
         $sortedChapters = array_values($sortedChapters);
 
         if (isset($sortedChapters[0])) {
+            // update_at = max update_at of all manga + 1s (to push this manga to top)
+            $maxUpdateAt = $this->db->table('manga')->selectMax('update_at')->get()->getRow()->update_at ?? time();
             $updateData = [
-                'update_at'   => time() + 4 * 3600,
+                'update_at'   => (int) $maxUpdateAt + 1,
                 'chapter_1'   => floatval($sortedChapters[0]->chapter_number),
                 'chap_1_slug' => $sortedChapters[0]->chapter_slug,
                 'time_chap_1' => strtotime($sortedChapters[0]->chapter_created_at),
