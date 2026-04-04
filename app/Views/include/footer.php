@@ -322,7 +322,7 @@
 
 
     $img.attr({
-      src: '<?=$cdnUrl?>/manga/'+item.slug+'/cover/cover_thumb.jpg',
+      src: item.cover_url || ('<?=$cdnUrl?>/manga/'+item.slug+'/cover/cover_thumb.jpg'),
       alt: item.name
     });
 
@@ -358,7 +358,7 @@
 
 
     $img.attr({
-      src: '<?=$cdnUrl?>/manga/'+item.slug+'/cover/cover_thumb.jpg',
+      src: item.cover_url || ('<?=$cdnUrl?>/manga/'+item.slug+'/cover/cover_thumb.jpg'),
       alt: item.name
     });
 

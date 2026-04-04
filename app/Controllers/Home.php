@@ -276,6 +276,7 @@ class Home extends BaseController
     {
         $search = $this->request->getGet('search');
         if ($search) {
+            $cdnUrl = config('Manga')->cdnUrl;
             $listManga = $this->db->table('manga')
                 ->select('id, name, slug, otherNames')
                 ->like('name', $search)
@@ -283,6 +284,10 @@ class Home extends BaseController
                 ->limit(10)
                 ->get()
                 ->getResult();
+
+            foreach ($listManga as $k => $manga) {
+                $listManga[$k]->cover_url = $cdnUrl . '/manga/' . $manga->slug . '/cover/cover_thumb.jpg';
+            }
 
             return $this->response->setJSON(['status' => 0, 'data' => $listManga]);
         }
@@ -294,6 +299,7 @@ class Home extends BaseController
     {
         $search = $this->request->getGet('search');
         if ($search) {
+            $cdnUrl = config('Manga')->cdnUrl;
             $listManga = $this->db->table('manga')
                 ->select('id, name, slug, otherNames, chapter_1')
                 ->like('name', $search)
@@ -304,6 +310,7 @@ class Home extends BaseController
 
             foreach ($listManga as $k => $manga) {
                 $listManga[$k]->name = $manga->name . ' - ' . $manga->chapter_1;
+                $listManga[$k]->cover_url = $cdnUrl . '/manga/' . $manga->slug . '/cover/cover_thumb.jpg';
             }
 
             return $this->response->setJSON(['status' => 0, 'data' => $listManga]);
