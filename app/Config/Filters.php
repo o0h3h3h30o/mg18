@@ -75,6 +75,8 @@ class Filters extends BaseFilters
         'before' => [
             'csrf' => ['except' => [
                 'apiAddChapter',
+                'api/upsert-manga',
+                'api/insert-chapter',
                 'search',
                 'apisearch',
                 'api/track-view',

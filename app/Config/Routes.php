@@ -48,6 +48,8 @@ $routes->post('changePass', 'User::updatePassword');
 
 // API & AJAX
 $routes->post('apiAddChapter', 'Manga::apiAddChapter');
+$routes->post('api/upsert-manga', 'Manga::apiUpsertManga');
+$routes->post('api/insert-chapter', 'Manga::apiInsertChapter');
 $routes->get('search', 'Home::search');
 $routes->get('apisearch', 'Home::search2');
 $routes->post('api/track-view', 'Manga::trackView');

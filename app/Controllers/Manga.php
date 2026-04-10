@@ -260,6 +260,342 @@ class Manga extends BaseController
         return $this->response->setBody('1');
     }
 
+    /**
+     * API: Insert or update manga
+     * POST JSON:
+     * {
+     *   "from_manga18fx": "https://manga18fx.com/manga/xxx",
+     *   "name": "Manga Name",
+     *   "authors": ["Author1"],
+     *   "artists": ["Artist1"],
+     *   "cover_url": "https://...",
+     *   "tags": ["Romance", "Drama"],
+     *   "genres": ["Manhwa", "Adult"],
+     *   "summary": "...",
+     *   "chapters": [
+     *     {"number": "1", "name": "Chapter 1", "source_url": "https://..."}
+     *   ]
+     * }
+     */
+    public function apiUpsertManga()
+    {
+        $data = json_decode($this->request->getBody(), true);
+        if (empty($data) || empty($data['name'])) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing name']);
+        }
+
+        $name = trim($data['name']);
+        $fromLink = trim($data['from_manga18fx'] ?? '');
+        $authors = $data['authors'] ?? [];
+        $artists = $data['artists'] ?? [];
+        $coverUrl = $data['cover_url'] ?? '';
+        $tags = $data['tags'] ?? [];
+        $genres = $data['genres'] ?? [];
+        $summary = $data['summary'] ?? '';
+        $chapters = $data['chapters'] ?? [];
+
+        // Check exact name match
+        $existing = $this->db->table('manga')->where('name', $name)->get()->getRow();
+
+        if ($existing) {
+            // Update: append from_manga18fx link
+            if ($fromLink) {
+                $currentLinks = trim($existing->from_manga18fx ?? '');
+                if ($currentLinks && !str_contains($currentLinks, $fromLink)) {
+                    $newLinks = $currentLinks . ',' . $fromLink;
+                } elseif (!$currentLinks) {
+                    $newLinks = $fromLink;
+                } else {
+                    $newLinks = $currentLinks;
+                }
+                $this->db->table('manga')->where('id', $existing->id)->update([
+                    'from_manga18fx' => $newLinks,
+                ]);
+            }
+
+            return $this->response->setJSON([
+                'status'   => 1,
+                'action'   => 'updated',
+                'manga_id' => $existing->id,
+                'slug'     => $existing->slug,
+            ]);
+        }
+
+        // Insert new manga
+        $slug = url_title($name, '-', true);
+        // Ensure unique slug
+        $slugCheck = $this->db->table('manga')->where('slug', $slug)->get()->getRow();
+        if ($slugCheck) {
+            $slug .= '-' . time();
+        }
+
+        $mangaModel = new \App\Models\MangaModel();
+        $mangaId = $mangaModel->insert([
+            'name'           => $name,
+            'slug'           => $slug,
+            'otherNames'     => '',
+            'summary'        => $summary,
+            'from_manga18fx' => $fromLink,
+            'cover'          => '',
+            'status_id'      => null,
+            'type_id'        => null,
+            'is_public'      => 1,
+            'hot'            => 0,
+            'is_new'         => 1,
+            'caution'        => 0,
+            'views'          => 0,
+            'view_day'       => 0,
+            'view_month'     => 0,
+            'create_at'      => time(),
+            'update_at'      => time(),
+        ]);
+
+        // Download cover
+        if ($coverUrl && filter_var($coverUrl, FILTER_VALIDATE_URL)) {
+            $this->downloadCover($slug, $coverUrl);
+        }
+
+        // Save genres (= categories)
+        foreach ($genres as $gName) {
+            $gName = trim($gName);
+            if (!$gName) continue;
+            $cat = $this->db->table('category')->where('name', $gName)->get()->getRow();
+            if (!$cat) {
+                $this->db->table('category')->insert([
+                    'name' => $gName,
+                    'slug' => url_title($gName, '-', true),
+                ]);
+                $catId = $this->db->insertID();
+            } else {
+                $catId = $cat->id;
+            }
+            $this->db->table('category_manga')->insert(['manga_id' => $mangaId, 'category_id' => $catId]);
+        }
+
+        // Save tags
+        foreach ($tags as $tName) {
+            $tName = trim($tName);
+            if (!$tName) continue;
+            $tag = $this->db->table('tag')->where('name', $tName)->get()->getRow();
+            if (!$tag) {
+                $this->db->table('tag')->insert(['name' => $tName, 'slug' => url_title($tName, '-', true)]);
+                $tagId = $this->db->insertID();
+            } else {
+                $tagId = $tag->id;
+            }
+            $this->db->table('manga_tag')->insert(['manga_id' => $mangaId, 'tag_id' => $tagId]);
+        }
+
+        // Save authors
+        $authorNamesStr = [];
+        foreach ($authors as $aName) {
+            $aName = trim($aName);
+            if (!$aName) continue;
+            $author = $this->db->table('author')->where('name', $aName)->get()->getRow();
+            if (!$author) {
+                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
+                $authorId = $this->db->insertID();
+            } else {
+                $authorId = $author->id;
+            }
+            $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $authorId, 'type' => 1]);
+            $authorNamesStr[] = $aName;
+        }
+        if ($authorNamesStr) {
+            $mangaModel->update($mangaId, ['_authors' => implode(', ', $authorNamesStr)]);
+        }
+
+        // Save artists
+        $artistNamesStr = [];
+        foreach ($artists as $aName) {
+            $aName = trim($aName);
+            if (!$aName) continue;
+            $artist = $this->db->table('author')->where('name', $aName)->get()->getRow();
+            if (!$artist) {
+                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
+                $artistId = $this->db->insertID();
+            } else {
+                $artistId = $artist->id;
+            }
+            $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $artistId, 'type' => 2]);
+            $artistNamesStr[] = $aName;
+        }
+        if ($artistNamesStr) {
+            $mangaModel->update($mangaId, ['_artists' => implode(', ', $artistNamesStr)]);
+        }
+
+        // Insert chapters if provided
+        $chapInserted = 0;
+        foreach ($chapters as $ch) {
+            $chNumber = $ch['number'] ?? null;
+            if (!$chNumber) continue;
+            $chName = $ch['name'] ?? 'Chapter ' . $chNumber;
+            $sourceUrl = $ch['source_url'] ?? '';
+
+            $this->db->table('chapter')->insert([
+                'manga_id'    => $mangaId,
+                'number'      => $chNumber,
+                'name'        => $chName,
+                'slug'        => 'chapter-' . $chNumber,
+                'source_url'  => $sourceUrl,
+                'is_show'     => 0,
+                'is_crawling' => 0,
+                'user_id'     => 1,
+                'volume'      => 0,
+                'created_at'  => date('Y-m-d H:i:s'),
+                'updated_at'  => date('Y-m-d H:i:s'),
+            ]);
+            $chapInserted++;
+        }
+
+        return $this->response->setJSON([
+            'status'          => 1,
+            'action'          => 'inserted',
+            'manga_id'        => $mangaId,
+            'slug'            => $slug,
+            'chapters_added'  => $chapInserted,
+        ]);
+    }
+
+    /**
+     * API: Insert chapter with images
+     * POST JSON:
+     * {
+     *   "manga_id": 123,
+     *   "name": "Chapter 10",
+     *   "number": "10",
+     *   "created_at": "2026-04-10 12:00:00",
+     *   "images": ["https://img1.jpg", "https://img2.jpg"]
+     * }
+     */
+    public function apiInsertChapter()
+    {
+        $data = json_decode($this->request->getBody(), true);
+        if (empty($data)) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid data']);
+        }
+
+        $mangaId = (int) ($data['manga_id'] ?? 0);
+        $number = $data['number'] ?? null;
+        $name = $data['name'] ?? '';
+        $createdAt = $data['created_at'] ?? date('Y-m-d H:i:s');
+        $images = $data['images'] ?? [];
+
+        if (!$mangaId || $number === null) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing manga_id or number']);
+        }
+
+        // Verify manga exists
+        $manga = $this->db->table('manga')->where('id', $mangaId)->get()->getRow();
+        if (!$manga) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Manga not found']);
+        }
+
+        // Check if chapter number already exists
+        $existing = $this->db->table('chapter')
+            ->where('manga_id', $mangaId)
+            ->where('number', $number)
+            ->get()->getRow();
+
+        if ($existing) {
+            return $this->response->setJSON([
+                'status' => 0,
+                'msg'    => 'Chapter ' . $number . ' already exists',
+                'chapter_id' => $existing->id,
+            ]);
+        }
+
+        // Insert chapter
+        if (!$name) {
+            $name = 'Chapter ' . $number;
+        }
+
+        $this->db->table('chapter')->insert([
+            'manga_id'    => $mangaId,
+            'number'      => $number,
+            'name'        => $name,
+            'slug'        => 'chapter-' . $number,
+            'is_show'     => 1,
+            'is_crawling' => 0,
+            'user_id'     => 1,
+            'volume'      => 0,
+            'created_at'  => $createdAt,
+            'updated_at'  => date('Y-m-d H:i:s'),
+        ]);
+        $chapterId = $this->db->insertID();
+
+        // Insert images as pages
+        if (!empty($images)) {
+            $batch = [];
+            $now = date('Y-m-d H:i:s');
+            foreach ($images as $k => $imgUrl) {
+                $batch[] = [
+                    'chapter_id' => $chapterId,
+                    'slug'       => (string) ($k + 1),
+                    'image'      => $imgUrl,
+                    'external'   => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+            $this->db->table('page')->insertBatch($batch);
+        }
+
+        return $this->response->setJSON([
+            'status'     => 1,
+            'msg'        => 'Chapter inserted',
+            'chapter_id' => $chapterId,
+            'pages'      => count($images),
+        ]);
+    }
+
+    /**
+     * Download cover image and create thumbnails
+     */
+    private function downloadCover(string $slug, string $coverUrl): void
+    {
+        $ch = curl_init($coverUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            CURLOPT_HTTPHEADER     => [
+                'Referer: ' . parse_url($coverUrl, PHP_URL_SCHEME) . '://' . parse_url($coverUrl, PHP_URL_HOST) . '/',
+            ],
+        ]);
+        $imgData = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!$imgData || $httpCode !== 200) return;
+
+        $savePath = config('Manga')->savePath . $slug . '/cover/';
+        if (!is_dir($savePath)) {
+            mkdir($savePath, 0755, true);
+            @chown($savePath, 'www');
+            @chgrp($savePath, 'www');
+        }
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
+        file_put_contents($tmpFile, $imgData);
+
+        try {
+            $imgService = \Config\Services::image();
+            $imgService->withFile($tmpFile)->resize(250, 350, true, 'height')->save($savePath . 'cover_250x350.jpg', 90);
+            $imgService->withFile($savePath . 'cover_250x350.jpg')->resize(150, 210, true, 'height')->save($savePath . 'cover_thumb.jpg', 85);
+            $imgService->withFile($savePath . 'cover_250x350.jpg')->resize(100, 140, true, 'height')->save($savePath . 'cover_thumb_2.webp', 85);
+        } catch (\Exception $e) {
+            log_message('error', 'Cover download error: ' . $e->getMessage());
+        }
+
+        @unlink($tmpFile);
+        foreach (glob($savePath . '*') as $f) {
+            @chmod($f, 0644);
+        }
+    }
+
     public function filter($slug = null, $page = null)
     {
         if (!$slug) {
