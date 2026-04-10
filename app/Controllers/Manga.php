@@ -475,21 +475,26 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid data']);
         }
 
-        $mangaId = (int) ($data['manga_id'] ?? 0);
+        $fromLink = trim($data['from_manga18fx'] ?? '');
         $number = $data['number'] ?? null;
         $name = $data['name'] ?? '';
         $createdAt = $data['created_at'] ?? date('Y-m-d H:i:s');
         $images = $data['images'] ?? [];
 
-        if (!$mangaId || $number === null) {
-            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing manga_id or number']);
+        if (!$fromLink || $number === null) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing from_manga18fx or number']);
         }
 
-        // Verify manga exists
-        $manga = $this->db->table('manga')->where('id', $mangaId)->get()->getRow();
+        // Find manga by from_manga18fx link (can contain multiple links separated by comma)
+        $manga = $this->db->table('manga')
+            ->like('from_manga18fx', $fromLink)
+            ->get()->getRow();
+
         if (!$manga) {
-            return $this->response->setJSON(['status' => 0, 'msg' => 'Manga not found']);
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Manga not found for link: ' . $fromLink]);
         }
+
+        $mangaId = $manga->id;
 
         // Check if chapter number already exists
         $existing = $this->db->table('chapter')
