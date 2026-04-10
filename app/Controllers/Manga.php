@@ -297,10 +297,16 @@ class Manga extends BaseController
         } else {
             $items = [$data];
         }
+        // Get referer from pages array (wrapper level)
+        $referer = '';
+        if (!empty($data['pages']) && is_array($data['pages'])) {
+            $referer = $data['pages'][0] ?? '';
+        }
+
         $results = [];
 
         foreach ($items as $item) {
-            $results[] = $this->processUpsertManga($item);
+            $results[] = $this->processUpsertManga($item, $referer);
         }
 
         // Return single result if single input
@@ -311,7 +317,7 @@ class Manga extends BaseController
         return $this->response->setJSON(['status' => 1, 'results' => $results]);
     }
 
-    private function processUpsertManga(array $data): array
+    private function processUpsertManga(array $data, string $referer = ''): array
     {
         $name = trim($data['title'] ?? $data['name'] ?? '');
         if (!$name) {
@@ -403,7 +409,7 @@ class Manga extends BaseController
 
         // Download cover
         if ($coverUrl && filter_var($coverUrl, FILTER_VALIDATE_URL)) {
-            $this->downloadCover($slug, $coverUrl);
+            $this->downloadCover($slug, $coverUrl, $referer);
         }
 
         // Save genres (= categories)
@@ -602,8 +608,12 @@ class Manga extends BaseController
     /**
      * Download cover image and create thumbnails
      */
-    private function downloadCover(string $slug, string $coverUrl): void
+    private function downloadCover(string $slug, string $coverUrl, string $referer = ''): void
     {
+        if (!$referer) {
+            $referer = parse_url($coverUrl, PHP_URL_SCHEME) . '://' . parse_url($coverUrl, PHP_URL_HOST) . '/';
+        }
+
         $ch = curl_init($coverUrl);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -612,7 +622,7 @@ class Manga extends BaseController
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             CURLOPT_HTTPHEADER     => [
-                'Referer: ' . parse_url($coverUrl, PHP_URL_SCHEME) . '://' . parse_url($coverUrl, PHP_URL_HOST) . '/',
+                'Referer: ' . $referer,
             ],
         ]);
         $imgData = curl_exec($ch);
