@@ -264,47 +264,89 @@ class Manga extends BaseController
      * API: Insert or update manga
      * POST JSON:
      * {
-     *   "from_manga18fx": "https://manga18fx.com/manga/xxx",
-     *   "name": "Manga Name",
-     *   "authors": ["Author1"],
-     *   "artists": ["Artist1"],
-     *   "cover_url": "https://...",
-     *   "tags": ["Romance", "Drama"],
-     *   "genres": ["Manhwa", "Adult"],
-     *   "summary": "...",
+     *   "id": "slug-from-source",
+     *   "source": "hentairead",
+     *   "title": "Manga Name",
+     *   "link": "https://hentairead.com/hentai/xxx/",
+     *   "coverUrl": "https://...",
+     *   "detailTitle": "Full Title | Alt Title",
+     *   "altTitle": "Alternative name",
+     *   "author": "Author Name",
+     *   "tags": ["Tag1", "Tag2"],
+     *   "genres": ["Genre1"],
+     *   "category": "Artist CG",
      *   "chapters": [
-     *     {"number": "1", "name": "Chapter 1", "source_url": "https://..."}
+     *     {"number": "1", "name": "Chapter 1", "url": "https://..."}
      *   ]
      * }
      */
     public function apiUpsertManga()
     {
         $data = json_decode($this->request->getBody(), true);
-        if (empty($data) || empty($data['name'])) {
-            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing name']);
+        if (empty($data)) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid data']);
         }
 
-        $name = trim($data['name']);
-        $fromLink = trim($data['from_manga18fx'] ?? '');
-        $authors = $data['authors'] ?? [];
-        $artists = $data['artists'] ?? [];
-        $coverUrl = $data['cover_url'] ?? '';
+        // Support both single object and array of objects
+        $items = isset($data['title']) ? [$data] : (isset($data[0]) ? $data : [$data]);
+        $results = [];
+
+        foreach ($items as $item) {
+            $results[] = $this->processUpsertManga($item);
+        }
+
+        // Return single result if single input
+        if (count($results) === 1) {
+            return $this->response->setJSON($results[0]);
+        }
+
+        return $this->response->setJSON(['status' => 1, 'results' => $results]);
+    }
+
+    private function processUpsertManga(array $data): array
+    {
+        $name = trim($data['title'] ?? $data['name'] ?? '');
+        if (!$name) {
+            return ['status' => 0, 'msg' => 'Missing title'];
+        }
+
+        $sourceLink = trim($data['link'] ?? $data['from_manga18fx'] ?? '');
+        $source = trim($data['source'] ?? '');
+        $coverUrl = trim($data['coverUrl'] ?? $data['cover_url'] ?? '');
+        $detailTitle = trim($data['detailTitle'] ?? '');
+        $altTitle = trim($data['altTitle'] ?? '');
+        $author = trim($data['author'] ?? '');
+        $category = trim($data['category'] ?? '');
         $tags = $data['tags'] ?? [];
         $genres = $data['genres'] ?? [];
-        $summary = $data['summary'] ?? '';
         $chapters = $data['chapters'] ?? [];
+        $views = (int) ($data['views'] ?? 0);
+        $rating = (float) ($data['rating'] ?? 0);
+        $summary = trim($data['summary'] ?? '');
+
+        // Build otherNames from detailTitle and altTitle
+        $otherNames = '';
+        $altParts = array_filter([$detailTitle, $altTitle]);
+        if ($altParts) {
+            $otherNames = implode(', ', $altParts);
+        }
+
+        // Merge category into genres if not empty
+        if ($category && !in_array($category, $genres)) {
+            $genres[] = $category;
+        }
 
         // Check exact name match
         $existing = $this->db->table('manga')->where('name', $name)->get()->getRow();
 
         if ($existing) {
-            // Update: append from_manga18fx link
-            if ($fromLink) {
+            // Update: append source link to from_manga18fx
+            if ($sourceLink) {
                 $currentLinks = trim($existing->from_manga18fx ?? '');
-                if ($currentLinks && !str_contains($currentLinks, $fromLink)) {
-                    $newLinks = $currentLinks . ',' . $fromLink;
+                if ($currentLinks && !str_contains($currentLinks, $sourceLink)) {
+                    $newLinks = $currentLinks . ',' . $sourceLink;
                 } elseif (!$currentLinks) {
-                    $newLinks = $fromLink;
+                    $newLinks = $sourceLink;
                 } else {
                     $newLinks = $currentLinks;
                 }
@@ -313,17 +355,17 @@ class Manga extends BaseController
                 ]);
             }
 
-            return $this->response->setJSON([
+            return [
                 'status'   => 1,
                 'action'   => 'updated',
                 'manga_id' => $existing->id,
                 'slug'     => $existing->slug,
-            ]);
+                'name'     => $name,
+            ];
         }
 
         // Insert new manga
         $slug = url_title($name, '-', true);
-        // Ensure unique slug
         $slugCheck = $this->db->table('manga')->where('slug', $slug)->get()->getRow();
         if ($slugCheck) {
             $slug .= '-' . time();
@@ -333,9 +375,9 @@ class Manga extends BaseController
         $mangaId = $mangaModel->insert([
             'name'           => $name,
             'slug'           => $slug,
-            'otherNames'     => '',
+            'otherNames'     => $otherNames,
             'summary'        => $summary,
-            'from_manga18fx' => $fromLink,
+            'from_manga18fx' => $sourceLink,
             'cover'          => '',
             'status_id'      => null,
             'type_id'        => null,
@@ -343,9 +385,10 @@ class Manga extends BaseController
             'hot'            => 0,
             'is_new'         => 1,
             'caution'        => 0,
-            'views'          => 0,
+            'views'          => $views,
             'view_day'       => 0,
             'view_month'     => 0,
+            'rating'         => $rating,
             'create_at'      => time(),
             'update_at'      => time(),
         ]);
@@ -386,51 +429,45 @@ class Manga extends BaseController
             $this->db->table('manga_tag')->insert(['manga_id' => $mangaId, 'tag_id' => $tagId]);
         }
 
-        // Save authors
-        $authorNamesStr = [];
-        foreach ($authors as $aName) {
-            $aName = trim($aName);
-            if (!$aName) continue;
-            $author = $this->db->table('author')->where('name', $aName)->get()->getRow();
-            if (!$author) {
-                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
+        // Save author (single string, not array)
+        if ($author) {
+            $authorRow = $this->db->table('author')->where('name', $author)->get()->getRow();
+            if (!$authorRow) {
+                $this->db->table('author')->insert(['name' => $author, 'slug' => url_title($author, '-', true)]);
                 $authorId = $this->db->insertID();
             } else {
-                $authorId = $author->id;
+                $authorId = $authorRow->id;
             }
             $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $authorId, 'type' => 1]);
-            $authorNamesStr[] = $aName;
-        }
-        if ($authorNamesStr) {
-            $mangaModel->update($mangaId, ['_authors' => implode(', ', $authorNamesStr)]);
-        }
-
-        // Save artists
-        $artistNamesStr = [];
-        foreach ($artists as $aName) {
-            $aName = trim($aName);
-            if (!$aName) continue;
-            $artist = $this->db->table('author')->where('name', $aName)->get()->getRow();
-            if (!$artist) {
-                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
-                $artistId = $this->db->insertID();
-            } else {
-                $artistId = $artist->id;
-            }
-            $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $artistId, 'type' => 2]);
-            $artistNamesStr[] = $aName;
-        }
-        if ($artistNamesStr) {
-            $mangaModel->update($mangaId, ['_artists' => implode(', ', $artistNamesStr)]);
+            $mangaModel->update($mangaId, ['_authors' => $author]);
         }
 
         // Insert chapters if provided
         $chapInserted = 0;
         foreach ($chapters as $ch) {
             $chNumber = $ch['number'] ?? null;
-            if (!$chNumber) continue;
-            $chName = $ch['name'] ?? 'Chapter ' . $chNumber;
-            $sourceUrl = $ch['source_url'] ?? '';
+            $chName = $ch['name'] ?? $ch['latestChapterName'] ?? '';
+            $sourceUrl = $ch['url'] ?? $ch['source_url'] ?? '';
+
+            if (!$chNumber && !$chName) continue;
+            if (!$chNumber) {
+                // Try extract number from name
+                if (preg_match('/(\d+(\.\d+)?)/', $chName, $m)) {
+                    $chNumber = $m[1];
+                } else {
+                    continue;
+                }
+            }
+            if (!$chName) {
+                $chName = 'Chapter ' . $chNumber;
+            }
+
+            // Skip if chapter number already exists
+            $chExist = $this->db->table('chapter')
+                ->where('manga_id', $mangaId)
+                ->where('number', $chNumber)
+                ->get()->getRow();
+            if ($chExist) continue;
 
             $this->db->table('chapter')->insert([
                 'manga_id'    => $mangaId,
@@ -448,20 +485,20 @@ class Manga extends BaseController
             $chapInserted++;
         }
 
-        return $this->response->setJSON([
-            'status'          => 1,
-            'action'          => 'inserted',
-            'manga_id'        => $mangaId,
-            'slug'            => $slug,
-            'chapters_added'  => $chapInserted,
-        ]);
+        return [
+            'status'         => 1,
+            'action'         => 'inserted',
+            'manga_id'       => $mangaId,
+            'slug'           => $slug,
+            'chapters_added' => $chapInserted,
+        ];
     }
 
     /**
      * API: Insert chapter with images
      * POST JSON:
      * {
-     *   "manga_id": 123,
+     *   "link": "https://hentairead.com/hentai/xxx/",
      *   "name": "Chapter 10",
      *   "number": "10",
      *   "created_at": "2026-04-10 12:00:00",
@@ -475,17 +512,17 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid data']);
         }
 
-        $fromLink = trim($data['from_manga18fx'] ?? '');
+        $fromLink = trim($data['link'] ?? $data['from_manga18fx'] ?? '');
         $number = $data['number'] ?? null;
         $name = $data['name'] ?? '';
         $createdAt = $data['created_at'] ?? date('Y-m-d H:i:s');
         $images = $data['images'] ?? [];
 
         if (!$fromLink || $number === null) {
-            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing from_manga18fx or number']);
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing link or number']);
         }
 
-        // Find manga by from_manga18fx link (can contain multiple links separated by comma)
+        // Find manga by source link in from_manga18fx (can contain multiple links separated by comma)
         $manga = $this->db->table('manga')
             ->like('from_manga18fx', $fromLink)
             ->get()->getRow();
