@@ -287,8 +287,16 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid data']);
         }
 
-        // Support both single object and array of objects
-        $items = isset($data['title']) ? [$data] : (isset($data[0]) ? $data : [$data]);
+        // Support: {items: [...]}, [{...}], or single {...}
+        if (isset($data['items'])) {
+            $items = $data['items'];
+        } elseif (isset($data['title'])) {
+            $items = [$data];
+        } elseif (isset($data[0])) {
+            $items = $data;
+        } else {
+            $items = [$data];
+        }
         $results = [];
 
         foreach ($items as $item) {
