@@ -52,7 +52,7 @@ class Filters extends BaseFilters
      */
     public array $required = [
         'before' => [
-            'forcehttps', // Force Global Secure Requests
+            // 'forcehttps', // Disabled - Cloudflare handles SSL, proxy doesn't forward proto
             'pagecache',  // Web Page Caching
         ],
         'after' => [
