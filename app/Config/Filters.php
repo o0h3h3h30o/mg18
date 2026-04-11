@@ -77,6 +77,8 @@ class Filters extends BaseFilters
                 'apiAddChapter',
                 'api/upsert-manga',
                 'api/insert-chapter',
+                'apiUpsertManga',
+                'apiInsertChapter',
                 'search',
                 'apisearch',
                 'api/track-view',
