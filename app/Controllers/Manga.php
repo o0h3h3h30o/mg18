@@ -540,6 +540,7 @@ class Manga extends BaseController
         $fromLink = trim($data['link'] ?? $data['from_manga18fx'] ?? '');
         $number = $data['number'] ?? null;
         $name = $data['name'] ?? '';
+        $sourceUrl = $data['source_url'] ?? '';
         $createdAt = $data['created_at'] ?? date('Y-m-d H:i:s');
         $images = $data['images'] ?? [];
 
@@ -592,6 +593,7 @@ class Manga extends BaseController
             'number'      => $number,
             'name'        => $name,
             'slug'        => 'chapter-' . $number,
+            'source_url'  => $sourceUrl,
             'is_show'     => 0,
             'is_crawling' => 2,
             'user_id'     => 1,
