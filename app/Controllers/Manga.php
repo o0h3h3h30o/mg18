@@ -325,7 +325,26 @@ class Manga extends BaseController
         }
 
         $sourceLink = trim($data['from_manga18fx'] ?? $data['link'] ?? '');
+        // Prefer largest image from coverSrcset, fallback to coverUrl
         $coverUrl = trim($data['cover_url'] ?? $data['coverUrl'] ?? '');
+        $coverSrcset = trim($data['coverSrcset'] ?? '');
+        if ($coverSrcset) {
+            // Parse srcset: "url1 350w, url2 500w, url3 700w" -> pick largest
+            $parts = array_map('trim', explode(',', $coverSrcset));
+            $bestUrl = '';
+            $bestW = 0;
+            foreach ($parts as $part) {
+                if (preg_match('/^(\S+)\s+(\d+)w$/', $part, $m)) {
+                    if ((int)$m[2] > $bestW) {
+                        $bestW = (int)$m[2];
+                        $bestUrl = $m[1];
+                    }
+                }
+            }
+            if ($bestUrl) {
+                $coverUrl = $bestUrl;
+            }
+        }
         $authors = $data['authors'] ?? [];
         $artists = $data['artists'] ?? [];
         $tags = $data['tags'] ?? [];
