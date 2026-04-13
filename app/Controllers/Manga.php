@@ -654,7 +654,10 @@ class Manga extends BaseController
 
         $savePath = config('Manga')->savePath . $slug . '/cover/';
         if (!is_dir($savePath)) {
-            mkdir($savePath, 0755, true);
+            if (!@mkdir($savePath, 0755, true)) {
+                log_message('error', 'Cannot create cover dir: ' . $savePath);
+                return;
+            }
             @chown($savePath, 'www');
             @chgrp($savePath, 'www');
         }
