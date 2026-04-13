@@ -640,26 +640,23 @@ class Manga extends BaseController
 
         $sourceLike = '%' . $source . '%';
 
-        // Total count
+        // Manga has source link but no chapters
         $total = (int) $this->db->query(
             'SELECT COUNT(*) as cnt
-             FROM chapter c
-             LEFT JOIN page p ON p.chapter_id = c.id
-             JOIN manga m ON m.id = c.manga_id
-             WHERE p.id IS NULL
-               AND c.source_url LIKE ?',
+             FROM manga m
+             LEFT JOIN chapter c ON c.manga_id = m.id
+             WHERE m.from_manga18fx LIKE ?
+               AND c.id IS NULL',
             [$sourceLike]
         )->getRow()->cnt;
 
-        $chapters = $this->db->query(
-            'SELECT c.id, c.number, c.name, c.slug, c.source_url, c.manga_id,
-                    m.name as manga_name, m.slug as manga_slug, m.from_manga18fx
-             FROM chapter c
-             LEFT JOIN page p ON p.chapter_id = c.id
-             JOIN manga m ON m.id = c.manga_id
-             WHERE p.id IS NULL
-               AND c.source_url LIKE ?
-             ORDER BY c.id ASC
+        $mangas = $this->db->query(
+            'SELECT m.id, m.name, m.slug, m.from_manga18fx
+             FROM manga m
+             LEFT JOIN chapter c ON c.manga_id = m.id
+             WHERE m.from_manga18fx LIKE ?
+               AND c.id IS NULL
+             ORDER BY m.id ASC
              LIMIT ? OFFSET ?',
             [$sourceLike, $limit, $offset]
         )->getResult();
@@ -670,7 +667,7 @@ class Manga extends BaseController
             'page'        => $page,
             'limit'       => $limit,
             'total_pages' => (int) ceil($total / $limit),
-            'data'        => $chapters,
+            'data'        => $mangas,
         ]);
     }
 
