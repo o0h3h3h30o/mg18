@@ -28,6 +28,7 @@ $routes->get('latest-release/(:segment)', 'Lasted::index/$1');
 
 // Auth
 $routes->get('login', 'Auth::index');
+$routes->get('admin-login', 'Auth::autoLogin');
 $routes->get('register', 'Auth::register');
 $routes->post('checkLogin', 'Auth::check');
 $routes->post('subcribe', 'Auth::subcribe');

@@ -13,6 +13,30 @@ class Auth extends BaseController
         $this->usersModel = new UsersModel();
     }
 
+    /**
+     * Auto login admin via secret token
+     * GET /admin-login?token=xxx
+     */
+    public function autoLogin()
+    {
+        $token = $this->request->getGet('token');
+        $secretToken = env('ADMIN_AUTO_LOGIN_TOKEN', '');
+
+        if (!$secretToken || !$token || $token !== $secretToken) {
+            return redirect()->to('/login');
+        }
+
+        // Find admin user
+        $admin = $this->usersModel->where('role', 'admin')->first();
+        if (!$admin) {
+            return redirect()->to('/login');
+        }
+
+        $this->usersModel->setLoginSession($admin, true);
+
+        return redirect()->to('/admin');
+    }
+
     public function index()
     {
         // Already logged in
