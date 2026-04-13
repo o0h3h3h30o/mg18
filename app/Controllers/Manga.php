@@ -658,8 +658,7 @@ class Manga extends BaseController
                 log_message('error', 'Cannot create cover dir: ' . $savePath);
                 return;
             }
-            @chown($savePath, 'www');
-            @chgrp($savePath, 'www');
+            if (function_exists('chown')) { @chown($savePath, 'www'); @chgrp($savePath, 'www'); }
         }
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
