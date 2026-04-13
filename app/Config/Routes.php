@@ -54,6 +54,8 @@ $routes->post('api/insert-chapter', 'Manga::apiInsertChapter');
 // Alias routes without slash (in case proxy blocks /api/ paths)
 $routes->post('apiUpsertManga', 'Manga::apiUpsertManga');
 $routes->post('apiInsertChapter', 'Manga::apiInsertChapter');
+$routes->get('api/chapters-need-crawl', 'Manga::apiChaptersNeedCrawl');
+$routes->get('apiChaptersNeedCrawl', 'Manga::apiChaptersNeedCrawl');
 $routes->get('search', 'Home::search');
 $routes->get('apisearch', 'Home::search2');
 $routes->post('api/track-view', 'Manga::trackView');

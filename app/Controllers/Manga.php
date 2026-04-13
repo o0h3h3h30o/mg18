@@ -627,6 +627,36 @@ class Manga extends BaseController
     }
 
     /**
+     * API: Get chapters without pages where source_url is from hentairead
+     * GET /api/chapters-need-crawl?source=hentairead&limit=50
+     */
+    public function apiChaptersNeedCrawl()
+    {
+        $source = $this->request->getGet('source') ?? 'hentairead';
+        $limit = (int) ($this->request->getGet('limit') ?? 50);
+        if ($limit < 1 || $limit > 500) $limit = 50;
+
+        $chapters = $this->db->query(
+            'SELECT c.id, c.number, c.name, c.slug, c.source_url, c.manga_id,
+                    m.name as manga_name, m.slug as manga_slug, m.from_manga18fx
+             FROM chapter c
+             LEFT JOIN page p ON p.chapter_id = c.id
+             JOIN manga m ON m.id = c.manga_id
+             WHERE p.id IS NULL
+               AND c.source_url LIKE ?
+             ORDER BY c.id ASC
+             LIMIT ?',
+            ['%' . $source . '%', $limit]
+        )->getResult();
+
+        return $this->response->setJSON([
+            'status' => 1,
+            'total'  => count($chapters),
+            'data'   => $chapters,
+        ]);
+    }
+
+    /**
      * Download cover image and create thumbnails
      */
     private function downloadCover(string $slug, string $coverUrl, string $referer = ''): void
