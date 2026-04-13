@@ -633,8 +633,23 @@ class Manga extends BaseController
     public function apiChaptersNeedCrawl()
     {
         $source = $this->request->getGet('source') ?? 'hentairead';
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
         $limit = (int) ($this->request->getGet('limit') ?? 50);
         if ($limit < 1 || $limit > 500) $limit = 50;
+        $offset = ($page - 1) * $limit;
+
+        $sourceLike = '%' . $source . '%';
+
+        // Total count
+        $total = (int) $this->db->query(
+            'SELECT COUNT(*) as cnt
+             FROM chapter c
+             LEFT JOIN page p ON p.chapter_id = c.id
+             JOIN manga m ON m.id = c.manga_id
+             WHERE p.id IS NULL
+               AND c.source_url LIKE ?',
+            [$sourceLike]
+        )->getRow()->cnt;
 
         $chapters = $this->db->query(
             'SELECT c.id, c.number, c.name, c.slug, c.source_url, c.manga_id,
@@ -645,14 +660,17 @@ class Manga extends BaseController
              WHERE p.id IS NULL
                AND c.source_url LIKE ?
              ORDER BY c.id ASC
-             LIMIT ?',
-            ['%' . $source . '%', $limit]
+             LIMIT ? OFFSET ?',
+            [$sourceLike, $limit, $offset]
         )->getResult();
 
         return $this->response->setJSON([
-            'status' => 1,
-            'total'  => count($chapters),
-            'data'   => $chapters,
+            'status'      => 1,
+            'total'       => $total,
+            'page'        => $page,
+            'limit'       => $limit,
+            'total_pages' => (int) ceil($total / $limit),
+            'data'        => $chapters,
         ]);
     }
 
