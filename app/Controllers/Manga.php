@@ -415,7 +415,6 @@ class Manga extends BaseController
             'views'          => $views,
             'view_day'       => 0,
             'view_month'     => 0,
-            'rate'           => $rating,
             'create_at'      => time(),
             'update_at'      => time(),
         ]);
