@@ -350,8 +350,21 @@ class Manga extends BaseController
             $genres[] = $category;
         }
 
-        // Check exact name match
+        // Check existing manga: 1) exact name match, 2) slug from URL match in from_manga18fx
         $existing = $this->db->table('manga')->where('name', $name)->get()->getRow();
+
+        // If not found by name, try matching by URL slug (last segment)
+        // e.g. https://mangadistrict.com/series/secret-class -> match "secret-class"
+        if (!$existing && $sourceLink) {
+            $urlSlug = rtrim(parse_url($sourceLink, PHP_URL_PATH) ?? '', '/');
+            $urlSlug = basename($urlSlug); // last segment only
+            if ($urlSlug) {
+                // Search for any manga that has this slug in from_manga18fx
+                $existing = $this->db->table('manga')
+                    ->like('from_manga18fx', '/' . $urlSlug)
+                    ->get()->getRow();
+            }
+        }
 
         if ($existing) {
             // Update: append source link to from_manga18fx
@@ -536,10 +549,20 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 0, 'msg' => 'Missing link or number']);
         }
 
-        // Find manga by source link in from_manga18fx (can contain multiple links separated by comma)
+        // Find manga by source link: try full URL first, then by last slug segment
         $manga = $this->db->table('manga')
             ->like('from_manga18fx', $fromLink)
             ->get()->getRow();
+
+        if (!$manga) {
+            // Try matching by last slug segment (handles mangadistrict URL changes)
+            $urlSlug = basename(rtrim(parse_url($fromLink, PHP_URL_PATH) ?? '', '/'));
+            if ($urlSlug) {
+                $manga = $this->db->table('manga')
+                    ->like('from_manga18fx', '/' . $urlSlug)
+                    ->get()->getRow();
+            }
+        }
 
         if (!$manga) {
             return $this->response->setJSON(['status' => 0, 'msg' => 'Manga not found for link: ' . $fromLink]);
