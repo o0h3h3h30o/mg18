@@ -319,36 +319,19 @@ class Manga extends BaseController
 
     private function processUpsertManga(array $data, string $referer = ''): array
     {
-        $name = trim($data['title'] ?? $data['name'] ?? '');
+        $name = trim($data['name'] ?? $data['title'] ?? '');
         if (!$name) {
-            return ['status' => 0, 'msg' => 'Missing title'];
+            return ['status' => 0, 'msg' => 'Missing name'];
         }
 
-        $sourceLink = trim($data['link'] ?? $data['from_manga18fx'] ?? '');
-        $source = trim($data['source'] ?? '');
-        $coverUrl = trim($data['coverUrl'] ?? $data['cover_url'] ?? '');
-        $detailTitle = trim($data['detailTitle'] ?? '');
-        $altTitle = trim($data['altTitle'] ?? '');
-        $author = trim($data['author'] ?? '');
-        $category = trim($data['category'] ?? '');
+        $sourceLink = trim($data['from_manga18fx'] ?? $data['link'] ?? '');
+        $coverUrl = trim($data['cover_url'] ?? $data['coverUrl'] ?? '');
+        $authors = $data['authors'] ?? [];
+        $artists = $data['artists'] ?? [];
         $tags = $data['tags'] ?? [];
         $genres = $data['genres'] ?? [];
         $chapters = $data['chapters'] ?? [];
-        $views = (int) ($data['views'] ?? 0);
-        $rating = (float) ($data['rating'] ?? 0);
         $summary = trim($data['summary'] ?? '');
-
-        // Build otherNames from detailTitle and altTitle
-        $otherNames = '';
-        $altParts = array_filter([$detailTitle, $altTitle]);
-        if ($altParts) {
-            $otherNames = implode(', ', $altParts);
-        }
-
-        // Merge category into genres if not empty
-        if ($category && !in_array($category, $genres)) {
-            $genres[] = $category;
-        }
 
         // Check existing manga: 1) exact name match, 2) slug from URL match in from_manga18fx
         $existing = $this->db->table('manga')->where('name', $name)->get()->getRow();
@@ -402,7 +385,6 @@ class Manga extends BaseController
         $mangaId = $mangaModel->insert([
             'name'           => $name,
             'slug'           => $slug,
-            'otherNames'     => $otherNames,
             'summary'        => $summary,
             'from_manga18fx' => $sourceLink,
             'cover'          => '',
@@ -412,7 +394,7 @@ class Manga extends BaseController
             'hot'            => 0,
             'is_new'         => 1,
             'caution'        => 0,
-            'views'          => $views,
+            'views'          => 0,
             'view_day'       => 0,
             'view_month'     => 0,
             'create_at'      => time(),
@@ -455,35 +437,52 @@ class Manga extends BaseController
             $this->db->table('manga_tag')->insert(['manga_id' => $mangaId, 'tag_id' => $tagId]);
         }
 
-        // Save author (single string, not array)
-        if ($author) {
-            $authorRow = $this->db->table('author')->where('name', $author)->get()->getRow();
+        // Save authors (type=1)
+        $authorNamesStr = [];
+        foreach ($authors as $aName) {
+            $aName = trim(is_string($aName) ? $aName : '');
+            if (!$aName) continue;
+            $authorRow = $this->db->table('author')->where('name', $aName)->get()->getRow();
             if (!$authorRow) {
-                $this->db->table('author')->insert(['name' => $author, 'slug' => url_title($author, '-', true)]);
+                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
                 $authorId = $this->db->insertID();
             } else {
                 $authorId = $authorRow->id;
             }
             $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $authorId, 'type' => 1]);
-            $mangaModel->update($mangaId, ['_authors' => $author]);
+            $authorNamesStr[] = $aName;
+        }
+        if ($authorNamesStr) {
+            $mangaModel->update($mangaId, ['_authors' => implode(', ', $authorNamesStr)]);
+        }
+
+        // Save artists (type=2)
+        $artistNamesStr = [];
+        foreach ($artists as $aName) {
+            $aName = trim(is_string($aName) ? $aName : '');
+            if (!$aName) continue;
+            $artistRow = $this->db->table('author')->where('name', $aName)->get()->getRow();
+            if (!$artistRow) {
+                $this->db->table('author')->insert(['name' => $aName, 'slug' => url_title($aName, '-', true)]);
+                $artistId = $this->db->insertID();
+            } else {
+                $artistId = $artistRow->id;
+            }
+            $this->db->table('author_manga')->insert(['manga_id' => $mangaId, 'author_id' => $artistId, 'type' => 2]);
+            $artistNamesStr[] = $aName;
+        }
+        if ($artistNamesStr) {
+            $mangaModel->update($mangaId, ['_artists' => implode(', ', $artistNamesStr)]);
         }
 
         // Insert chapters if provided
         $chapInserted = 0;
         foreach ($chapters as $ch) {
             $chNumber = $ch['number'] ?? null;
-            $chName = $ch['name'] ?? $ch['latestChapterName'] ?? '';
-            $sourceUrl = $ch['url'] ?? $ch['source_url'] ?? '';
+            $chName = $ch['name'] ?? '';
+            $sourceUrl = $ch['source_url'] ?? '';
 
-            if (!$chNumber && !$chName) continue;
-            if (!$chNumber) {
-                // Try extract number from name
-                if (preg_match('/(\d+(\.\d+)?)/', $chName, $m)) {
-                    $chNumber = $m[1];
-                } else {
-                    continue;
-                }
-            }
+            if (!$chNumber) continue;
             if (!$chName) {
                 $chName = 'Chapter ' . $chNumber;
             }
