@@ -173,7 +173,7 @@
                   <h5><i class="ti-book"></i> SUMMARY</h5>
                 </div>
                 <div class="detail_reviewContent">
-                  <?= strip_tags(html_entity_decode($manga_info->summary, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '<br><p><b><i><strong><em><ul><ol><li><a><span>') ?>
+                  <?= preg_replace('/href\s*=\s*["\']?\s*javascript:/i', 'href="#"', strip_tags(html_entity_decode($manga_info->summary, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '<br><p><b><i><strong><em><ul><ol><li><a><span>')) ?>
                 </div>
               </div>
               <div class="divads" style="">
