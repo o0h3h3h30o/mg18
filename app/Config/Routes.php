@@ -49,10 +49,11 @@ $routes->post('changePass', 'User::updatePassword');
 
 // API & AJAX
 $routes->post('apiAddChapter', 'Manga::apiAddChapter');
-$routes->post('api/upsert-manga', 'Manga::apiUpsertManga');
+// DISABLED - no auth, XSS risk. Uncomment when needed.
+// $routes->post('api/upsert-manga', 'Manga::apiUpsertManga');
 $routes->post('api/insert-chapter', 'Manga::apiInsertChapter');
 // Alias routes without slash (in case proxy blocks /api/ paths)
-$routes->post('apiUpsertManga', 'Manga::apiUpsertManga');
+// $routes->post('apiUpsertManga', 'Manga::apiUpsertManga');
 $routes->post('apiInsertChapter', 'Manga::apiInsertChapter');
 $routes->get('api/chapters-need-crawl', 'Manga::apiChaptersNeedCrawl');
 $routes->get('apiChaptersNeedCrawl', 'Manga::apiChaptersNeedCrawl');
