@@ -693,6 +693,89 @@ class Manga extends BaseController
     }
 
     /**
+     * API: List all manga from a given source with their existing chapter numbers
+     * GET /api/manga-by-source?source=allporncomic&page=1&limit=50
+     *
+     * Response per item:
+     *   id, name, slug, source_url (from_manga18fx),
+     *   chapters: [{ id, number, source_url }]
+     */
+    public function apiMangaBySource()
+    {
+        $source = trim($this->request->getGet('source') ?? 'allporncomic');
+        $page   = max(1, (int) ($this->request->getGet('page')  ?? 1));
+        $limit  = (int) ($this->request->getGet('limit') ?? 50);
+        if ($limit < 1 || $limit > 500) $limit = 50;
+        $offset = ($page - 1) * $limit;
+
+        if (!$source) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing source']);
+        }
+
+        $sourceLike = '%' . $source . '%';
+
+        $total = (int) $this->db->query(
+            'SELECT COUNT(*) as cnt FROM manga WHERE from_manga18fx LIKE ?',
+            [$sourceLike]
+        )->getRow()->cnt;
+
+        $mangas = $this->db->query(
+            'SELECT id, name, slug, from_manga18fx AS source_url
+             FROM manga
+             WHERE from_manga18fx LIKE ?
+             ORDER BY id ASC
+             LIMIT ? OFFSET ?',
+            [$sourceLike, $limit, $offset]
+        )->getResult();
+
+        if (empty($mangas)) {
+            return $this->response->setJSON([
+                'status'      => 1,
+                'total'       => $total,
+                'page'        => $page,
+                'limit'       => $limit,
+                'total_pages' => 0,
+                'data'        => [],
+            ]);
+        }
+
+        // Fetch existing chapters for these manga in one query
+        $mangaIds = array_column($mangas, 'id');
+        $placeholders = implode(',', array_fill(0, count($mangaIds), '?'));
+        $chapters = $this->db->query(
+            "SELECT id, manga_id, number, source_url
+             FROM chapter
+             WHERE manga_id IN ($placeholders)
+             ORDER BY manga_id ASC, number ASC",
+            $mangaIds
+        )->getResult();
+
+        // Group chapters by manga_id
+        $chapterMap = [];
+        foreach ($chapters as $ch) {
+            $chapterMap[$ch->manga_id][] = [
+                'id'         => $ch->id,
+                'number'     => $ch->number,
+                'source_url' => $ch->source_url,
+            ];
+        }
+
+        foreach ($mangas as $m) {
+            $m->chapters = $chapterMap[$m->id] ?? [];
+        }
+
+        return $this->response->setJSON([
+            'status'      => 1,
+            'source'      => $source,
+            'total'       => $total,
+            'page'        => $page,
+            'limit'       => $limit,
+            'total_pages' => (int) ceil($total / $limit),
+            'data'        => $mangas,
+        ]);
+    }
+
+    /**
      * Download cover image and create thumbnails
      */
     private function downloadCover(string $slug, string $coverUrl, string $referer = ''): void

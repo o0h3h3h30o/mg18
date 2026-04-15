@@ -56,6 +56,7 @@ $routes->post('apiUpsertManga', 'Manga::apiUpsertManga');
 $routes->post('apiInsertChapter', 'Manga::apiInsertChapter');
 $routes->get('api/chapters-need-crawl', 'Manga::apiChaptersNeedCrawl');
 $routes->get('apiChaptersNeedCrawl', 'Manga::apiChaptersNeedCrawl');
+$routes->get('api/manga-by-source', 'Manga::apiMangaBySource');
 $routes->get('search', 'Home::search');
 $routes->get('apisearch', 'Home::search2');
 $routes->post('api/track-view', 'Manga::trackView');

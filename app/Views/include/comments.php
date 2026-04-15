@@ -343,14 +343,24 @@ if(typeof CMT==='undefined') window.CMT={};
       });
   };
 
+  function escHtml(text){
+    return String(text)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+
   function highlightMentions(text){
-    return text.replace(/@(\w+)/g, '<span class="cmt-mention">@$1</span>');
+    return escHtml(text).replace(/@(\w+)/g, '<span class="cmt-mention">@$1</span>');
   }
 
   function buildHtml(c, isReply){
-    var initial = (c.username||'?').charAt(0).toUpperCase();
+    var safeUsername = escHtml(c.username||'?');
+    var initial = safeUsername.charAt(0).toUpperCase();
     var avatarHtml = (c.avatar && c.avatar!=='0' && c.avatar!==0)
-      ? '<img src="'+c.avatar+'" alt="">'
+      ? '<img src="'+escHtml(c.avatar)+'" alt="">'
       : initial;
 
     var likeActive = (c.user_reaction==='like') ? ' active' : '';
@@ -378,12 +388,20 @@ if(typeof CMT==='undefined') window.CMT={};
       repliesHtml = '<div class="cmt-replies" id="replies_'+I+'_'+c.id+'" style="display:none;"></div>';
     }
 
+    var chapterBadge = '';
+    if(c.chapter_label){
+      var safeLabel = escHtml(c.chapter_label);
+      chapterBadge = ' ' + (c.chapter_url
+        ? '<a href="'+escHtml(c.chapter_url)+'" class="cmt-chapter-badge">'+safeLabel+'</a>'
+        : '<span class="cmt-chapter-badge">'+safeLabel+'</span>');
+    }
+
     return '<li class="cmt-item" id="cmt_'+I+'_'+c.id+'">'
       +'<div class="cmt-row">'
       +'<div class="cmt-avatar">'+avatarHtml+'</div>'
       +'<div class="cmt-content">'
-      +'<span class="cmt-username">'+c.username+(c.chapter_label ? ' '+(c.chapter_url ? '<a href="'+c.chapter_url+'" class="cmt-chapter-badge">'+c.chapter_label+'</a>' : '<span class="cmt-chapter-badge">'+c.chapter_label+'</span>') : '')+'</span>'
-      +'<span class="cmt-time">'+c.time_ago+'</span>'
+      +'<span class="cmt-username">'+safeUsername+chapterBadge+'</span>'
+      +'<span class="cmt-time">'+escHtml(c.time_ago)+'</span>'
       +'<div class="cmt-body">'+highlightMentions(c.comment)+'</div>'
       +'<div class="cmt-actions">'+acts+'</div>'
       +'</div>'

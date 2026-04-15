@@ -222,23 +222,25 @@
                     </style>
                     <script>
                     (function(){
+                      function escHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
                       fetch('/api/comments/recent?limit=5')
                         .then(function(r){return r.json()})
                         .then(function(d){
                           if(d.status!=='ok'||!d.comments.length) return;
                           var html='';
                           d.comments.forEach(function(c){
-                            var initial=(c.username||'?').charAt(0).toUpperCase();
+                            var initial=escHtml((c.username||'?').charAt(0).toUpperCase());
                             var avatar=(c.avatar&&c.avatar!=='0')
-                              ? '<img class="rc-avatar" src="'+c.avatar+'">'
+                              ? '<img class="rc-avatar" src="'+escHtml(c.avatar)+'">'
                               : '<div class="rc-avatar-letter">'+initial+'</div>';
+                            var safeLink = /^\//.test(c.link||'') ? c.link : '#';
                             html+='<div class="rc-item">'
-                              +'<div class="rc-book"><div class="book_name"><a href="'+c.link+'">'+c.manga_title+'</a></div></div>'
+                              +'<div class="rc-book"><div class="book_name"><a href="'+escHtml(safeLink)+'">'+escHtml(c.manga_title)+'</a></div></div>'
                               +'<div class="rc-media">'
                               +avatar
                               +'<div class="rc-body">'
-                              +'<div class="rc-user-row"><span class="rc-username">'+c.username+'</span><span class="rc-time">'+c.time_ago+'</span></div>'
-                              +'<p class="rc-text">'+c.comment+'</p>'
+                              +'<div class="rc-user-row"><span class="rc-username">'+escHtml(c.username)+'</span><span class="rc-time">'+escHtml(c.time_ago)+'</span></div>'
+                              +'<p class="rc-text">'+escHtml(c.comment)+'</p>'
                               +'</div></div></div>';
                           });
                           document.getElementById('rc-list').innerHTML=html;
