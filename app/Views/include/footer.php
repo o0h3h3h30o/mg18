@@ -130,6 +130,7 @@
         }
         // Load notifications (server-rendered, no API needed for user state)
         <?php if($is_logged): ?>
+        function _notifEsc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
         $.getJSON("/notifications", function(data) {
             if (data.status == 1 && data.notifications.length > 0) {
                 var html = '';
@@ -138,13 +139,13 @@
                     var n = data.notifications[k];
                     var cls = n.is_read == 0 ? 'notif-unread' : '';
                     if (n.is_read == 0) unread++;
-                    var icon = n.icon_class || 'ti-bell';
-                    html += '<li class="' + cls + '"><a href="/notification/go/' + n.id + '">'
+                    var icon = (n.icon_class || 'ti-bell').replace(/[^a-zA-Z0-9\- ]/g,'');
+                    html += '<li class="' + cls + '"><a href="/notification/go/' + parseInt(n.id,10) + '">'
                         + '<span class="notif-icon"><i class="' + icon + '"></i></span>'
                         + '<span class="notif-info">'
-                        + '<strong>' + n.title + '</strong>'
-                        + (n.message ? '<br><small>' + n.message + '</small>' : '')
-                        + '<br><span class="notif-time">' + n.time_ago + '</span>'
+                        + '<strong>' + _notifEsc(n.title) + '</strong>'
+                        + (n.message ? '<br><small>' + _notifEsc(n.message) + '</small>' : '')
+                        + '<br><span class="notif-time">' + _notifEsc(n.time_ago) + '</span>'
                         + '</span>'
                         + '</a></li>';
                 }
