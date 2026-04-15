@@ -12,6 +12,7 @@
     "require": {
         "php": "^8.2",
         "codeigniter4/framework": "^4.7",
+        "ezyang/htmlpurifier": "^4.19",
         "voku/simple_html_dom": "^4.8"
     },
     "require-dev": {

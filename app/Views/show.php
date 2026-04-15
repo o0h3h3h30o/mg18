@@ -173,7 +173,14 @@
                   <h5><i class="ti-book"></i> SUMMARY</h5>
                 </div>
                 <div class="detail_reviewContent">
-                  <?= preg_replace('/href\s*=\s*["\']?\s*javascript:/i', 'href="#"', strip_tags(html_entity_decode($manga_info->summary, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '<br><p><b><i><strong><em><ul><ol><li><a><span>')) ?>
+                  <?php
+                  $purifier_config = HTMLPurifier_Config::createDefault();
+                  $purifier_config->set('HTML.Allowed', 'br,p,b,i,strong,em,ul,ol,li,a[href],span');
+                  $purifier_config->set('URI.SafeIframeRegexp', null);
+                  $purifier_config->set('Cache.SerializerPath', WRITEPATH . 'cache');
+                  $purifier = new HTMLPurifier($purifier_config);
+                  echo $purifier->purify(html_entity_decode($manga_info->summary, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                  ?>
                 </div>
               </div>
               <div class="divads" style="">
