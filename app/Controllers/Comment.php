@@ -274,8 +274,8 @@ class Comment extends BaseController
             'status'  => 'ok',
             'comment' => [
                 'id'        => $id,
-                'comment'   => esc($comment),
-                'username'  => esc($this->user_info->username),
+                'comment'   => $comment,
+                'username'  => $this->user_info->username,
                 'avatar'    => (!empty($this->user_info->avatar) && $this->user_info->avatar != '0')
                                 ? '/uploads/users/' . $this->user_info->id . '-thumb.jpg'
                                 : null,
@@ -462,12 +462,12 @@ class Comment extends BaseController
 
             $result[] = [
                 'id'         => $c->id,
-                'comment'    => esc($c->comment),
-                'username'   => esc($c->username ?? 'Unknown'),
+                'comment'    => $c->comment,
+                'username'   => $c->username ?? 'Unknown',
                 'avatar'     => $avatarUrl,
                 'time_ago'   => $this->timeAgo($c->created_at),
                 'link'       => $link,
-                'manga_title' => esc($mangaTitle),
+                'manga_title' => $mangaTitle,
             ];
         }
 
@@ -498,8 +498,8 @@ class Comment extends BaseController
 
         return [
             'id'             => $c->id,
-            'comment'        => esc($c->comment),
-            'username'       => esc($c->username ?? 'Unknown'),
+            'comment'        => $c->comment,
+            'username'       => $c->username ?? 'Unknown',
             'avatar'         => $avatarUrl,
             'user_id'        => $c->user_id,
             'parent_comment' => $c->parent_comment,
