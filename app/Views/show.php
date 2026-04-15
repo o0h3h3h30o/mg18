@@ -30,13 +30,13 @@
                   <div class="col-md-8 col-sm-8 col-xs-12">
                     <div class="detail_infomation">
                       <div class="detail_name">
-                        <h1><?= esc($manga_info->name) ?></h1>
+                        <h1><?= esc(html_entity_decode($manga_info->name, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?></h1>
                       </div>
                       
                       <div class="detail_listInfo">
                          <div class="item">
                           <div class="info_label"><i class="lnr lnr-tag"></i> Other name</div>
-                          <div class="info_value"><span><?= esc($manga_info->otherNames) ?></span></div>
+                          <div class="info_value"><span><?= esc(html_entity_decode($manga_info->otherNames ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?></span></div>
                         </div>
                         <div class="item">
                           <div class="info_label"><i class="lnr lnr-user"></i> Author</div>
