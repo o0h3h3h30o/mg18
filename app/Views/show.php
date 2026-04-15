@@ -173,7 +173,7 @@
                   <h5><i class="ti-book"></i> SUMMARY</h5>
                 </div>
                 <div class="detail_reviewContent">
-                  <?= nl2br(esc($manga_info->summary)) ?>
+                  <?= strip_tags(html_entity_decode($manga_info->summary), '<br><p><b><i><strong><em><ul><ol><li><a><span>') ?>
                 </div>
               </div>
               <div class="divads" style="">
