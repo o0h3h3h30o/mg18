@@ -77,6 +77,24 @@ class Auth extends BaseController
             return redirect()->to('/login');
         }
 
+        // Rate limit: max 5 failed attempts per IP, lock 5 minutes
+        $ip = $this->request->getIPAddress();
+        $cacheKey = 'login_attempts_' . md5($ip);
+        $attempts = cache($cacheKey) ?? ['count' => 0, 'first_at' => time()];
+
+        if ($attempts['count'] >= 5) {
+            $elapsed = time() - $attempts['first_at'];
+            $remaining = max(0, 300 - $elapsed);
+            if ($remaining > 0) {
+                $mins = (int) ceil($remaining / 60);
+                session()->setFlashdata('message', 'Too many failed attempts. Try again in ' . $mins . ' minute(s).');
+                session()->setFlashdata('message_type', 'danger');
+                return redirect()->to('/login');
+            }
+            // Window expired, reset
+            $attempts = ['count' => 0, 'first_at' => time()];
+        }
+
         // reCAPTCHA (skip on localhost)
         if (!$this->isLocalhost()) {
             if (!$this->validateRecaptcha($this->request->getPost('g-recaptcha-response'))) {
@@ -92,7 +110,19 @@ class Auth extends BaseController
         $user = $this->usersModel->authenticate($username, $password);
 
         if (!$user) {
-            session()->setFlashdata('message', 'Invalid username or password');
+            // Increment failed attempts
+            $attempts['count']++;
+            if ($attempts['count'] === 1) {
+                $attempts['first_at'] = time();
+            }
+            cache()->save($cacheKey, $attempts, 300);
+
+            $left = 5 - $attempts['count'];
+            $msg = 'Invalid username or password.';
+            if ($left > 0 && $left <= 2) {
+                $msg .= ' ' . $left . ' attempt(s) remaining.';
+            }
+            session()->setFlashdata('message', $msg);
             session()->setFlashdata('message_type', 'danger');
             return redirect()->to('/login');
         }
@@ -103,6 +133,9 @@ class Auth extends BaseController
             session()->setFlashdata('message_type', 'danger');
             return redirect()->to('/login');
         }
+
+        // Login success — clear failed attempts
+        cache()->delete($cacheKey);
 
         $remember = (bool) $this->request->getPost('remember_me');
         $this->usersModel->setLoginSession($user, $remember);
