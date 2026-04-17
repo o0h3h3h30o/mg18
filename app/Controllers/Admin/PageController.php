@@ -310,8 +310,9 @@ class PageController extends BaseController
 
         // Redirect back to chapter edit if came from there
         $referer = $this->request->getHeaderLine('Referer');
-        if (strpos($referer, '/admin/chapters/edit/') !== false) {
-            return redirect()->to($referer)->with('success', 'Page deleted.');
+        $parsedPath = parse_url($referer, PHP_URL_PATH) ?: '';
+        if (str_contains($parsedPath, '/admin/chapters/edit/')) {
+            return redirect()->to($parsedPath)->with('success', 'Page deleted.');
         }
         return redirect()->to('/admin/pages/' . $chapterId)->with('success', 'Page deleted.');
     }

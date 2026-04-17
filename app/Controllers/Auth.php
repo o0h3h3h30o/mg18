@@ -22,7 +22,7 @@ class Auth extends BaseController
         $token = $this->request->getGet('token');
         $secretToken = env('ADMIN_AUTO_LOGIN_TOKEN', '');
 
-        if (!$secretToken || !$token || $token !== $secretToken) {
+        if (!$secretToken || !$token || !hash_equals($secretToken, $token)) {
             return redirect()->to('/login');
         }
 
