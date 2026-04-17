@@ -117,7 +117,7 @@ class Auth extends BaseController
             'email'    => 'required|valid_email|max_length[255]',
             'password' => 'required|min_length[6]|max_length[255]',
         ])) {
-            session()->setFlashdata('message', implode('<br>', $this->validator->getErrors()));
+            session()->setFlashdata('message', implode('<br>', array_map('esc', $this->validator->getErrors())));
             session()->setFlashdata('message_type', 'danger');
             return redirect()->to('/register');
         }

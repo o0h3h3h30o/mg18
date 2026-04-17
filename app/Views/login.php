@@ -46,7 +46,7 @@
 									<form action="<?=base_url();?>checkLogin" method="POST">
 									<?= csrf_field() ?>
 										<?php if(isset($message_type)){ ?>
-										<div class="alert alert-danger"><i class="fa fa-times"></i> <span><?=$message;?></span></div>
+										<div class="alert alert-danger"><i class="fa fa-times"></i> <span><?= $message; ?></span></div>
 										<?php } ?>								
 										<div class="login_form__content">
 											<div class="form_item">
