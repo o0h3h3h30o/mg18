@@ -9,7 +9,7 @@
         <div class="section_breadcrumb-content">
           <ol class="breadcrumb">
             <?php foreach ($breadcrums as $key => $value) { ?>
-            <li><a href="<?=$value['link']?>"><?=$value['title']?></a></li>
+            <li><a href="<?= esc($value['link']) ?>"><?= esc($value['title']) ?></a></li>
             <?php } ?>            
           </ol>
         </div>

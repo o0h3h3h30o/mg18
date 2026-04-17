@@ -39,7 +39,7 @@
         <div class="section_breadcrumb-content">
           <ol class="breadcrumb">
              <?php foreach ($breadcrums as $key => $value) { ?>
-            <li><a href="<?=$value['link']?>"><?=$value['title']?></a></li>
+            <li><a href="<?= esc($value['link']) ?>"><?= esc($value['title']) ?></a></li>
             <?php } ?>      
           </ol>
         </div>
@@ -50,10 +50,10 @@
         <div class="chapter_detailBox">
           <div class="chapter_detailHead">
             <div class="story_name">
-              <h1><?=$manga_info->name?></h1>
+              <h1><?= esc($manga_info->name) ?></h1>
             </div>
-            <div class="chapter_name"> Chapter <span><?=$chapter_info->number?></span></div>
-            <div class="chapter_time">[ Update at <span><?=$chapter_info->created_at ?></span> ]</div>
+            <div class="chapter_name"> Chapter <span><?= esc($chapter_info->number) ?></span></div>
+            <div class="chapter_time">[ Update at <span><?= esc($chapter_info->created_at) ?></span> ]</div>
           </div>
           <div class="chapter_detailBody">
             <p>If you cannot see the story, please change the "SERVER" below!</p>
@@ -113,7 +113,7 @@
                   <?php } ?>
                   <select class="form-control" id="slcChapter">
                       <?php foreach($manga_info->chapters as $k => $v) { ?>
-                      <option value="<?php echo base_url();?>manhwa/<?=$manga_info->slug.'/'.$v->slug?>" <?php if($v->current==1) echo "selected"; ?>><?=$v->name ?></option>    
+                      <option value="<?php echo base_url();?>manhwa/<?=$manga_info->slug.'/'.$v->slug?>" <?php if($v->current==1) echo "selected"; ?>><?= esc($v->name) ?></option>    
                       <?php } ?>
                   </select>
                   <?php if(isset($chapter_info->nextChapter->id)){ ?>
@@ -261,7 +261,7 @@
                   <?php } ?>
                   <select class="form-control" id="slcChapter2">
                       <?php foreach($manga_info->chapters as $k => $v) { ?>
-                      <option value="<?php echo base_url();?>manhwa/<?=$manga_info->slug.'/'.$v->slug?>" <?php if($v->current==1) echo "selected"; ?>><?=$v->name ?></option>
+                      <option value="<?php echo base_url();?>manhwa/<?=$manga_info->slug.'/'.$v->slug?>" <?php if($v->current==1) echo "selected"; ?>><?= esc($v->name) ?></option>
                       <?php } ?>
                   </select>
                   <?php if(isset($chapter_info->nextChapter->id)){ ?>

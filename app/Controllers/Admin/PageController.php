@@ -50,7 +50,15 @@ class PageController extends BaseController
             mkdir($uploadDir, 0755, true);
         }
 
+        // Validate real image via MIME
+        $mime = mime_content_type($file->getTempName());
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!in_array($mime, $allowedMimes)) {
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid image type: ' . $mime]);
+        }
+
         $ext = $file->getExtension();
+        $slug = basename($slug); // prevent path traversal
         $filename = $slug . '.' . $ext;
         $file->move($uploadDir, $filename);
 
@@ -100,10 +108,19 @@ class PageController extends BaseController
             $this->cleanDir($tmpDir);
             return redirect()->back()->with('error', 'Failed to open ZIP file.');
         }
+        // Check for path traversal in ZIP entries
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entryName = $zip->getNameIndex($i);
+            if (str_contains($entryName, '..') || str_starts_with($entryName, '/')) {
+                $zip->close();
+                $this->cleanDir($tmpDir);
+                return redirect()->back()->with('error', 'ZIP contains unsafe paths.');
+            }
+        }
         $zip->extractTo($tmpDir . '/extracted');
         $zip->close();
 
-        // Find all image files recursively
+        // Find all image files recursively (verify MIME type)
         $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
         $images = [];
         $this->findImages($tmpDir . '/extracted', $allowedExts, $images);
@@ -122,7 +139,12 @@ class PageController extends BaseController
 
         $nextSlug = $this->getNextSlug($chapterId);
         $batch = [];
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         foreach ($images as $imgPath) {
+            // Verify real MIME type
+            $fileMime = @mime_content_type($imgPath);
+            if (!in_array($fileMime, $allowedMimes)) continue;
+
             $ext = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
             $filename = $nextSlug . '.' . $ext;
 

@@ -447,7 +447,7 @@ class MangaController extends BaseController
                 }
                 $innerHtml = trim($innerHtml);
                 if ($innerHtml) {
-                    $data['summary'] = $innerHtml;
+                    $data['summary'] = strip_tags($innerHtml, '<br><p><b><i><strong><em><ul><ol><li><span>');
                     break;
                 }
             }

@@ -216,7 +216,7 @@ CKEDITOR.replace('summaryEditor', {
         { name: 'tools', items: ['Source'] }
     ],
     removePlugins: 'image,uploadimage',
-    allowedContent: true
+    allowedContent: 'p br b i strong em u ul ol li a[href] span; h1 h2 h3 h4 h5 h6'
 });
 function generateSlug() {
     var name = document.getElementById('mangaName').value;
