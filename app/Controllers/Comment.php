@@ -191,12 +191,16 @@ class Comment extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Too many comments. Please wait a moment.']);
         }
 
-        // If reply, verify parent exists
+        // If reply, verify parent exists and inherit its post_id/post_type
+        // (so replies from manga_all view work correctly for chapter comments too)
         if ($parentId) {
             $parent = $this->model->find($parentId);
-            if (!$parent || $parent->post_id != $postId || $parent->post_type != $postType) {
+            if (!$parent) {
                 return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid parent comment']);
             }
+            // Inherit parent's target so reply attaches to the same post as the parent
+            $postId   = (int) $parent->post_id;
+            $postType = $parent->post_type;
         }
 
         $now = date('Y-m-d H:i:s');
