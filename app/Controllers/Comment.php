@@ -214,14 +214,26 @@ class Comment extends BaseController
             'updated_at'     => $now,
         ]);
 
-        // Get manga info for notifications
-        $mangaId = null; $mangaSlug = null; $mangaName = null;
+        // Get manga + chapter info for notifications (works for both manga & chapter comments)
+        $mangaId = null; $mangaSlug = null; $mangaName = null; $chapterSlug = '';
         if ($postType === 'manga') {
             $manga = $this->db->table('manga')->select('id, slug, name')->where('id', $postId)->get()->getRow();
             if ($manga) {
                 $mangaId   = $manga->id;
                 $mangaSlug = $manga->slug;
                 $mangaName = $manga->name;
+            }
+        } elseif ($postType === 'chapter') {
+            $row = $this->db->query(
+                'SELECT m.id AS manga_id, m.slug AS manga_slug, m.name AS manga_name, ch.slug AS chapter_slug
+                 FROM chapter ch LEFT JOIN manga m ON m.id = ch.manga_id WHERE ch.id = ?',
+                [$postId]
+            )->getRow();
+            if ($row) {
+                $mangaId     = (int) $row->manga_id;
+                $mangaSlug   = $row->manga_slug;
+                $mangaName   = $row->manga_name;
+                $chapterSlug = $row->chapter_slug ?? '';
             }
         }
 
@@ -240,7 +252,7 @@ class Comment extends BaseController
                     'manga_id'     => $mangaId,
                     'manga_slug'   => $mangaSlug,
                     'manga_name'   => $mangaName,
-                    'chapter_slug' => '',
+                    'chapter_slug' => $chapterSlug,
                     'preview'      => $shortComment,
                     'is_read'      => 0,
                 ]);
@@ -265,7 +277,7 @@ class Comment extends BaseController
                         'manga_id'     => $mangaId,
                         'manga_slug'   => $mangaSlug,
                         'manga_name'   => $mangaName,
-                        'chapter_slug' => '',
+                        'chapter_slug' => $chapterSlug,
                         'preview'      => $shortComment,
                         'is_read'      => 0,
                     ]);
