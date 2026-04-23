@@ -272,8 +272,16 @@ class Crawl extends \CodeIgniter\Controller
         echo "Chapters found: " . count($chapters) . "\n";
         echo "Cover: {$data['image']}\n\n";
 
-        // Check if manga already exists (by source URL or name)
-        $existingManga = $this->findMangaByLink($sourceUrl);
+        // Check if manga already exists — match only the last-segment slug of the URL
+        // so different host prefixes or extra query params still resolve to the same manga.
+        // e.g. https://mangadistrict.com/series/secret-class-uncensored-fan-edition/ -> "secret-class-uncensored-fan-edition"
+        $urlSlug = basename(rtrim(parse_url($sourceUrl, PHP_URL_PATH) ?? '', '/'));
+        $existingManga = null;
+        if ($urlSlug !== '') {
+            $existingManga = $this->db->table('manga')
+                ->like('from_manga18fx', '/' . $urlSlug)
+                ->get()->getRow();
+        }
         if (!$existingManga) {
             $existingManga = $this->findMangaByName($data['name']);
         }
