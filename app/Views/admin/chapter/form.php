@@ -168,12 +168,6 @@
                             <button class="btn btn-primary w-100"><i class="bi bi-file-earmark-zip"></i> Extract & Upload</button>
                         </div>
                     </div>
-                    <div class="form-check mt-2">
-                        <input type="checkbox" name="watermark" value="1" class="form-check-input" id="zipWatermark" checked>
-                        <label for="zipWatermark" class="form-check-label">
-                            Đóng watermark logo (100&times;50, góc dưới phải)
-                        </label>
-                    </div>
                 </form>
             </div>
 
