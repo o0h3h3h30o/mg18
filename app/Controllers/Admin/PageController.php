@@ -140,6 +140,8 @@ class PageController extends BaseController
         $nextSlug = $this->getNextSlug($chapterId);
         $batch = [];
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        $watermark = (int) $this->request->getPost('watermark') === 1;
+
         foreach ($images as $imgPath) {
             // Verify real MIME type
             $fileMime = @mime_content_type($imgPath);
@@ -147,8 +149,13 @@ class PageController extends BaseController
 
             $ext = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
             $filename = $nextSlug . '.' . $ext;
+            $destPath = $uploadDir . '/' . $filename;
 
-            copy($imgPath, $uploadDir . '/' . $filename);
+            if ($watermark && $this->applyWatermark($imgPath, $destPath, $fileMime)) {
+                // Watermark applied successfully
+            } else {
+                copy($imgPath, $destPath);
+            }
 
             $batch[] = [
                 'chapter_id' => $chapterId,
@@ -482,5 +489,68 @@ class PageController extends BaseController
         }
 
         return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('error', 'No pages selected.');
+    }
+
+    /**
+     * Overlay watermark logo onto image, save to destination.
+     * Watermark is at FCPATH . 'img/watermark.png' (PNG with transparency).
+     * Positioned bottom-right with 10px margin, sized 100x50.
+     */
+    private function applyWatermark(string $srcPath, string $destPath, string $mime): bool
+    {
+        $wmFile = FCPATH . 'img/watermark.png';
+        if (!is_file($wmFile)) return false;
+
+        // Load source
+        switch ($mime) {
+            case 'image/jpeg': $src = @imagecreatefromjpeg($srcPath); break;
+            case 'image/png':  $src = @imagecreatefrompng($srcPath); break;
+            case 'image/webp': $src = @imagecreatefromwebp($srcPath); break;
+            case 'image/gif':  $src = @imagecreatefromgif($srcPath); break;
+            default: return false;
+        }
+        if (!$src) return false;
+
+        $wm = @imagecreatefrompng($wmFile);
+        if (!$wm) { imagedestroy($src); return false; }
+
+        // Resize watermark to 100x50
+        $wmW = 100; $wmH = 50;
+        $wmResized = imagecreatetruecolor($wmW, $wmH);
+        imagealphablending($wmResized, false);
+        imagesavealpha($wmResized, true);
+        $transparent = imagecolorallocatealpha($wmResized, 0, 0, 0, 127);
+        imagefilledrectangle($wmResized, 0, 0, $wmW, $wmH, $transparent);
+        imagecopyresampled(
+            $wmResized, $wm,
+            0, 0, 0, 0,
+            $wmW, $wmH,
+            imagesx($wm), imagesy($wm)
+        );
+        imagedestroy($wm);
+
+        // Position: bottom-right with 10px margin
+        $srcW = imagesx($src);
+        $srcH = imagesy($src);
+        $dstX = $srcW - $wmW - 10;
+        $dstY = $srcH - $wmH - 10;
+        if ($dstX < 0) $dstX = 0;
+        if ($dstY < 0) $dstY = 0;
+
+        // Use imagecopy with alpha (preserves PNG transparency)
+        imagealphablending($src, true);
+        imagecopy($src, $wmResized, $dstX, $dstY, 0, 0, $wmW, $wmH);
+        imagedestroy($wmResized);
+
+        // Save in original format
+        $ok = false;
+        switch ($mime) {
+            case 'image/jpeg': $ok = imagejpeg($src, $destPath, 90); break;
+            case 'image/png':  $ok = imagepng($src, $destPath, 6); break;
+            case 'image/webp': $ok = imagewebp($src, $destPath, 90); break;
+            case 'image/gif':  $ok = imagegif($src, $destPath); break;
+        }
+        imagedestroy($src);
+        return $ok;
     }
 }
