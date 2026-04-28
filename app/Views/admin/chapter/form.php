@@ -169,9 +169,15 @@
                         </div>
                     </div>
                     <div class="form-check mt-2">
+                        <input type="checkbox" name="prepend_banner" value="1" class="form-check-input" id="zipPrependBanner" checked>
+                        <label for="zipPrependBanner" class="form-check-label">
+                            Nối banner vào <strong>đầu</strong> page đầu tiên
+                        </label>
+                    </div>
+                    <div class="form-check">
                         <input type="checkbox" name="append_banner" value="1" class="form-check-input" id="zipAppendBanner" checked>
                         <label for="zipAppendBanner" class="form-check-label">
-                            Nối banner manga18.club vào ảnh cuối cùng
+                            Nối banner vào <strong>cuối</strong> page cuối cùng
                         </label>
                     </div>
                 </form>
