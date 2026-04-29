@@ -689,15 +689,6 @@ class Crawl extends \CodeIgniter\Controller
             // Save and optimize image
             $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
 
-            // Check if it's a dummy/logo image (height = 300)
-            $info = @getimagesize($chapterDir . $finalName);
-            if ($info && $info[1] == 300) {
-                echo "  Skipped logo image (300px height)\n";
-                @unlink($chapterDir . $finalName);
-                $index++;
-                continue;
-            }
-
             // Insert page record
             $this->db->table('page')->insert([
                 'slug'       => $index,
