@@ -500,8 +500,15 @@ class PageController extends BaseController
      */
     private function appendBanner(string $srcPath, string $destPath, string $mime): bool
     {
-        $bannerFile = is_file(FCPATH . 'img/banner.png') ? FCPATH . 'img/banner.png'
-                    : (is_file(FCPATH . 'img/banner.jpg') ? FCPATH . 'img/banner.jpg' : null);
+        $candidates = [
+            FCPATH . '1.jpg',
+            FCPATH . 'img/banner.png',
+            FCPATH . 'img/banner.jpg',
+        ];
+        $bannerFile = null;
+        foreach ($candidates as $c) {
+            if (is_file($c)) { $bannerFile = $c; break; }
+        }
         if (!$bannerFile) return false;
 
         // Load source
