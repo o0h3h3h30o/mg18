@@ -1168,19 +1168,10 @@ class Crawl extends \CodeIgniter\Controller
         $imgDoms = $readContent[0]->find('img');
         $index = 1;
         $pages = [];
-        $isMangaDistrict = str_contains($chapter->source_url, 'mangadistrict');
-        $skippedFirstHeader = false;
 
         foreach ($imgDoms as $imgDom) {
             $src = trim($imgDom->getAttribute('data-src') ?: $imgDom->getAttribute('src') ?: '');
             if (!$src || str_contains($src, 'loading') || str_contains($src, 'logo')) continue;
-
-            // MangaDistrict: skip the very first image (site header / disclaimer)
-            if ($isMangaDistrict && !$skippedFirstHeader) {
-                $skippedFirstHeader = true;
-                echo "  Skipped first image (mangadistrict header): " . substr($src, 0, 60) . "\n";
-                continue;
-            }
 
             $this->db->table('page')->insert([
                 'slug'       => $index,
