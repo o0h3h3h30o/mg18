@@ -140,7 +140,8 @@ class PageController extends BaseController
         $nextSlug = $this->getNextSlug($chapterId);
         $batch = [];
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $appendBanner = (int) $this->request->getPost('append_banner') === 1;
+        $appendBanner  = (int) $this->request->getPost('append_banner') === 1;
+        $prependBanner = (int) $this->request->getPost('prepend_banner') === 1;
         $lastIndex = count($images) - 1;
 
         foreach ($images as $i => $imgPath) {
@@ -152,9 +153,13 @@ class PageController extends BaseController
             $filename = $nextSlug . '.' . $ext;
             $destPath = $uploadDir . '/' . $filename;
 
-            $isLast = ($i === $lastIndex);
-            if ($appendBanner && $isLast && $this->appendBanner($imgPath, $destPath, $fileMime)) {
-                // Banner appended to last image
+            $isFirst = ($i === 0);
+            $isLast  = ($i === $lastIndex);
+            $applyTop    = $prependBanner && $isFirst;
+            $applyBottom = $appendBanner  && $isLast;
+
+            if (($applyTop || $applyBottom) && $this->mergeBanner($imgPath, $destPath, $fileMime, $applyTop, $applyBottom)) {
+                // Banner merged
             } else {
                 copy($imgPath, $destPath);
             }
@@ -494,12 +499,16 @@ class PageController extends BaseController
     }
 
     /**
-     * Append banner image to bottom of page (extends canvas, doesn't overlay).
-     * Banner is scaled to match page width, aspect ratio preserved.
-     * Banner file: public/img/banner.png (or .jpg)
+     * Merge banner with page (extends canvas, not overlay).
+     * - $top:    prepend banner to top of page
+     * - $bottom: append banner to bottom of page
+     * Banner scaled to match page width, aspect ratio preserved.
+     * Banner file: public/1.jpg (fallback to public/img/banner.png/.jpg)
      */
-    private function appendBanner(string $srcPath, string $destPath, string $mime): bool
+    private function mergeBanner(string $srcPath, string $destPath, string $mime, bool $top, bool $bottom): bool
     {
+        if (!$top && !$bottom) return false;
+
         $candidates = [
             FCPATH . '1.jpg',
             FCPATH . 'img/banner.png',
@@ -545,15 +554,24 @@ class PageController extends BaseController
         imagecopyresampled($scaledBanner, $banner, 0, 0, 0, 0, $srcW, $scaledH, $bW, $bH);
         imagedestroy($banner);
 
-        // Create new canvas: srcH + scaledH
-        $finalH = $srcH + $scaledH;
+        // Total height = (top banner ?) + src + (bottom banner ?)
+        $topH    = $top    ? $scaledH : 0;
+        $bottomH = $bottom ? $scaledH : 0;
+        $finalH  = $topH + $srcH + $bottomH;
         $final = imagecreatetruecolor($srcW, $finalH);
         $whiteFinal = imagecolorallocate($final, 255, 255, 255);
         imagefilledrectangle($final, 0, 0, $srcW, $finalH, $whiteFinal);
 
-        // Copy original to top, banner below
-        imagecopy($final, $src, 0, 0, 0, 0, $srcW, $srcH);
-        imagecopy($final, $scaledBanner, 0, $srcH, 0, 0, $srcW, $scaledH);
+        $y = 0;
+        if ($top) {
+            imagecopy($final, $scaledBanner, 0, $y, 0, 0, $srcW, $scaledH);
+            $y += $scaledH;
+        }
+        imagecopy($final, $src, 0, $y, 0, 0, $srcW, $srcH);
+        $y += $srcH;
+        if ($bottom) {
+            imagecopy($final, $scaledBanner, 0, $y, 0, 0, $srcW, $scaledH);
+        }
         imagedestroy($src);
         imagedestroy($scaledBanner);
 
