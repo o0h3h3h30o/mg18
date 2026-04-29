@@ -184,7 +184,6 @@ class Crawl extends \CodeIgniter\Controller
             @mkdir($chapterDir, 0755, true);
             if (function_exists('chown')) { @chown($chapterDir, 'www'); @chgrp($chapterDir, 'www'); }
 
-            $savedPaths = [];
             foreach ($pages as $page) {
                 $imageUrl = $page->image;
                 $ext = $this->getImageExtension($imageUrl);
@@ -203,15 +202,14 @@ class Crawl extends \CodeIgniter\Controller
                         'image'    => $finalName,
                         'external' => 0,
                     ]);
-                    $savedPaths[] = $chapterDir . $finalName;
                     echo "  OK: Page {$finalName}\n";
                 } else {
                     echo "  FAIL: Page {$pageName} ({$imageUrl})\n";
                 }
             }
 
-            // Apply banner to first/last actual saved page (preserves crawl order)
-            $this->applyBannerToFiles($savedPaths);
+            // Apply banner to first/last page
+            $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
 
             // Done
             $this->db->table('chapter')->where('id', $item->id)->update([
@@ -668,7 +666,6 @@ class Crawl extends \CodeIgniter\Controller
         $imgDoms = $readContent[0]->find('img');
         $index = 1;
         $successCount = 0;
-        $savedPaths = [];
 
         foreach ($imgDoms as $imgDom) {
             $src = trim($imgDom->getAttribute('src') ?: $imgDom->src ?? '');
@@ -708,14 +705,13 @@ class Crawl extends \CodeIgniter\Controller
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
 
-            $savedPaths[] = $chapterDir . $finalName;
             $successCount++;
             echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
             $index++;
         }
 
-        // Apply banner to first/last actual saved page (preserves crawl order)
-        $this->applyBannerToFiles($savedPaths);
+        // Apply banner to first/last page
+        $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
 
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([
@@ -765,7 +761,6 @@ class Crawl extends \CodeIgniter\Controller
 
         $index = 1;
         $successCount = 0;
-        $savedPaths = [];
         $skippedFirstHeader = false;
 
         foreach ($imgDoms as $imgDom) {
@@ -817,14 +812,13 @@ class Crawl extends \CodeIgniter\Controller
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
 
-            $savedPaths[] = $chapterDir . $finalName;
             $successCount++;
             echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
             $index++;
         }
 
-        // Apply banner to first/last actual saved page (preserves crawl order)
-        $this->applyBannerToFiles($savedPaths);
+        // Apply banner to first/last page
+        $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
 
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([

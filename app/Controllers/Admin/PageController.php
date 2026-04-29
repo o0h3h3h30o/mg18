@@ -142,12 +142,12 @@ class PageController extends BaseController
 
         $nextSlug = $this->getNextSlug($chapterId);
         $batch = [];
-        $savedPaths = [];
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         $appendBanner  = (int) $this->request->getPost('append_banner') === 1;
         $prependBanner = (int) $this->request->getPost('prepend_banner') === 1;
+        $lastIndex = count($images) - 1;
 
-        foreach ($images as $imgPath) {
+        foreach ($images as $i => $imgPath) {
             // Verify real MIME type
             $fileMime = @mime_content_type($imgPath);
             if (!in_array($fileMime, $allowedMimes)) continue;
@@ -156,7 +156,16 @@ class PageController extends BaseController
             $filename = $nextSlug . '.' . $ext;
             $destPath = $uploadDir . '/' . $filename;
 
-            copy($imgPath, $destPath);
+            $isFirst = ($i === 0);
+            $isLast  = ($i === $lastIndex);
+            $applyTop    = $prependBanner && $isFirst;
+            $applyBottom = $appendBanner  && $isLast;
+
+            if (($applyTop || $applyBottom) && $this->mergeBanner($imgPath, $destPath, $fileMime, $applyTop, $applyBottom)) {
+                // Banner merged
+            } else {
+                copy($imgPath, $destPath);
+            }
 
             $batch[] = [
                 'chapter_id' => $chapterId,
@@ -164,24 +173,7 @@ class PageController extends BaseController
                 'image'      => $filename,
                 'external'   => 0,
             ];
-            $savedPaths[] = $destPath;
             $nextSlug++;
-        }
-
-        // Apply banner using saved order (first/last by upload order, not alpha sort)
-        if (!empty($savedPaths) && ($appendBanner || $prependBanner)) {
-            $first = $savedPaths[0];
-            $last  = end($savedPaths);
-            $isSame = ($first === $last);
-            $firstMime = mime_content_type($first);
-            $lastMime  = mime_content_type($last);
-
-            if ($isSame) {
-                $this->mergeBanner($first, $first, $firstMime, $prependBanner, $appendBanner);
-            } else {
-                if ($prependBanner) $this->mergeBanner($first, $first, $firstMime, true, false);
-                if ($appendBanner)  $this->mergeBanner($last,  $last,  $lastMime,  false, true);
-            }
         }
 
         if ($batch) {
