@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use voku\helper\HtmlDomParser;
-use App\Traits\BannerMerger;
 
 /**
  * Crawl Controller - Refactored
@@ -13,8 +12,6 @@ use App\Traits\BannerMerger;
  */
 class Crawl extends \CodeIgniter\Controller
 {
-    use BannerMerger;
-
     protected $db;
     protected string $savePath;
 
@@ -207,9 +204,6 @@ class Crawl extends \CodeIgniter\Controller
                     echo "  FAIL: Page {$pageName} ({$imageUrl})\n";
                 }
             }
-
-            // Apply banner to first/last page
-            $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
 
             // Done
             $this->db->table('chapter')->where('id', $item->id)->update([
@@ -710,9 +704,6 @@ class Crawl extends \CodeIgniter\Controller
             $index++;
         }
 
-        // Apply banner to first/last page
-        $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
-
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([
             'is_crawling' => 0,
@@ -761,7 +752,6 @@ class Crawl extends \CodeIgniter\Controller
 
         $index = 1;
         $successCount = 0;
-        $skippedFirstHeader = false;
 
         foreach ($imgDoms as $imgDom) {
             $src = trim($imgDom->getAttribute('data-src') ?: $imgDom->getAttribute('src') ?: '');
@@ -770,13 +760,6 @@ class Crawl extends \CodeIgniter\Controller
             // Skip tiny images (likely ads/logos)
             $width = (int) ($imgDom->getAttribute('width') ?: 0);
             if ($width > 0 && $width < 100) continue;
-
-            // MangaDistrict: skip the very first image (site header/disclaimer)
-            if (!$skippedFirstHeader) {
-                $skippedFirstHeader = true;
-                echo "  Skipped first image (mangadistrict header): " . substr($src, 0, 80) . "...\n";
-                continue;
-            }
 
             $ext = $this->getImageExtension($src);
             $pageName = str_pad($index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
@@ -816,9 +799,6 @@ class Crawl extends \CodeIgniter\Controller
             echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
             $index++;
         }
-
-        // Apply banner to first/last page
-        $this->applyBannerToChapterDir(rtrim($chapterDir, '/'));
 
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([
