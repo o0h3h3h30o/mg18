@@ -763,10 +763,6 @@ class Crawl extends \CodeIgniter\Controller
             $src = trim($imgDom->getAttribute('data-src') ?: $imgDom->getAttribute('src') ?: '');
             if (!$src || str_contains($src, 'logo') || str_contains($src, 'icon')) continue;
 
-            // Skip tiny images (likely ads/logos)
-            $width = (int) ($imgDom->getAttribute('width') ?: 0);
-            if ($width > 0 && $width < 100) continue;
-
             // MangaDistrict: skip the very first image (site header/disclaimer)
             if (!$skippedFirstHeader) {
                 $skippedFirstHeader = true;
@@ -788,15 +784,6 @@ class Crawl extends \CodeIgniter\Controller
 
             // Save and optimize image
             $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
-
-            // Skip tiny/logo images by actual size
-            $info = @getimagesize($chapterDir . $finalName);
-            if ($info && $info[1] < 100) {
-                echo "  Skipped tiny image ({$info[1]}px height)\n";
-                @unlink($chapterDir . $finalName);
-                $index++;
-                continue;
-            }
 
             // Insert page record
             $this->db->table('page')->insert([
