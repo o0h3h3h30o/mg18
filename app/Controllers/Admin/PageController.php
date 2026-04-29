@@ -140,24 +140,15 @@ class PageController extends BaseController
         $nextSlug = $this->getNextSlug($chapterId);
         $batch = [];
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $appendBanner = (int) $this->request->getPost('append_banner') === 1;
-        $lastIndex = count($images) - 1;
-
-        foreach ($images as $i => $imgPath) {
+        foreach ($images as $imgPath) {
             // Verify real MIME type
             $fileMime = @mime_content_type($imgPath);
             if (!in_array($fileMime, $allowedMimes)) continue;
 
             $ext = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
             $filename = $nextSlug . '.' . $ext;
-            $destPath = $uploadDir . '/' . $filename;
 
-            $isLast = ($i === $lastIndex);
-            if ($appendBanner && $isLast && $this->appendBanner($imgPath, $destPath, $fileMime)) {
-                // Banner appended to last image
-            } else {
-                copy($imgPath, $destPath);
-            }
+            copy($imgPath, $uploadDir . '/' . $filename);
 
             $batch[] = [
                 'chapter_id' => $chapterId,
@@ -491,74 +482,5 @@ class PageController extends BaseController
         }
 
         return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('error', 'No pages selected.');
-    }
-
-    /**
-     * Append banner image to bottom of page (extends canvas, doesn't overlay).
-     * Banner is scaled to match page width, aspect ratio preserved.
-     * Banner file: public/img/banner.png (or .jpg)
-     */
-    private function appendBanner(string $srcPath, string $destPath, string $mime): bool
-    {
-        $bannerFile = is_file(FCPATH . 'img/banner.png') ? FCPATH . 'img/banner.png'
-                    : (is_file(FCPATH . 'img/banner.jpg') ? FCPATH . 'img/banner.jpg' : null);
-        if (!$bannerFile) return false;
-
-        // Load source
-        switch ($mime) {
-            case 'image/jpeg': $src = @imagecreatefromjpeg($srcPath); break;
-            case 'image/png':  $src = @imagecreatefrompng($srcPath); break;
-            case 'image/webp': $src = @imagecreatefromwebp($srcPath); break;
-            case 'image/gif':  $src = @imagecreatefromgif($srcPath); break;
-            default: return false;
-        }
-        if (!$src) return false;
-
-        // Load banner
-        $bannerInfo = @getimagesize($bannerFile);
-        if (!$bannerInfo) { imagedestroy($src); return false; }
-        switch ($bannerInfo[2]) {
-            case IMAGETYPE_PNG:  $banner = @imagecreatefrompng($bannerFile); break;
-            case IMAGETYPE_JPEG: $banner = @imagecreatefromjpeg($bannerFile); break;
-            default: imagedestroy($src); return false;
-        }
-        if (!$banner) { imagedestroy($src); return false; }
-
-        $srcW = imagesx($src);
-        $srcH = imagesy($src);
-        $bW = imagesx($banner);
-        $bH = imagesy($banner);
-
-        // Scale banner to match page width, keep aspect ratio
-        $scaledH = (int) round($bH * ($srcW / $bW));
-        $scaledBanner = imagecreatetruecolor($srcW, $scaledH);
-        // White background (in case banner has transparency we don't want black)
-        $white = imagecolorallocate($scaledBanner, 255, 255, 255);
-        imagefilledrectangle($scaledBanner, 0, 0, $srcW, $scaledH, $white);
-        imagecopyresampled($scaledBanner, $banner, 0, 0, 0, 0, $srcW, $scaledH, $bW, $bH);
-        imagedestroy($banner);
-
-        // Create new canvas: srcH + scaledH
-        $finalH = $srcH + $scaledH;
-        $final = imagecreatetruecolor($srcW, $finalH);
-        $whiteFinal = imagecolorallocate($final, 255, 255, 255);
-        imagefilledrectangle($final, 0, 0, $srcW, $finalH, $whiteFinal);
-
-        // Copy original to top, banner below
-        imagecopy($final, $src, 0, 0, 0, 0, $srcW, $srcH);
-        imagecopy($final, $scaledBanner, 0, $srcH, 0, 0, $srcW, $scaledH);
-        imagedestroy($src);
-        imagedestroy($scaledBanner);
-
-        // Save in original format
-        $ok = false;
-        switch ($mime) {
-            case 'image/jpeg': $ok = imagejpeg($final, $destPath, 90); break;
-            case 'image/png':  $ok = imagepng($final, $destPath, 6); break;
-            case 'image/webp': $ok = imagewebp($final, $destPath, 90); break;
-            case 'image/gif':  $ok = imagegif($final, $destPath); break;
-        }
-        imagedestroy($final);
-        return $ok;
     }
 }

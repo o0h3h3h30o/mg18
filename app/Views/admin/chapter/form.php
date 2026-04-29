@@ -168,12 +168,6 @@
                             <button class="btn btn-primary w-100"><i class="bi bi-file-earmark-zip"></i> Extract & Upload</button>
                         </div>
                     </div>
-                    <div class="form-check mt-2">
-                        <input type="checkbox" name="append_banner" value="1" class="form-check-input" id="zipAppendBanner" checked>
-                        <label for="zipAppendBanner" class="form-check-label">
-                            Nối banner manga18.club vào ảnh cuối cùng
-                        </label>
-                    </div>
                 </form>
             </div>
 
