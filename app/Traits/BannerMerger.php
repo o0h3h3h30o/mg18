@@ -98,36 +98,27 @@ trait BannerMerger
     }
 
     /**
-     * Apply banner to first and last page in a chapter directory.
-     * Pages are sorted alphabetically by filename. Banner is added to the
-     * top of the first file and the bottom of the last file (in-place).
+     * Apply banner to the explicit first/last file paths.
+     * Caller passes an ordered array of saved page paths (in display order).
+     * Banner is added to the top of the first and bottom of the last file.
+     *
+     * Use this when you control the order of pages (e.g. crawler index loop)
+     * so we don't depend on directory scanning + alphabetical sort, which
+     * breaks with mixed extensions / leftover files from previous crawls.
      */
-    protected function applyBannerToChapterDir(string $chapterDir): void
+    protected function applyBannerToFiles(array $orderedPaths): void
     {
-        if (!is_dir($chapterDir)) return;
+        $orderedPaths = array_values(array_filter($orderedPaths, 'is_file'));
+        if (empty($orderedPaths)) return;
 
-        $files = [];
-        foreach (scandir($chapterDir) ?: [] as $f) {
-            if ($f === '.' || $f === '..') continue;
-            $full = $chapterDir . '/' . $f;
-            if (!is_file($full)) continue;
-            $mime = @mime_content_type($full);
-            if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                $files[] = $full;
-            }
-        }
-        if (empty($files)) return;
-        sort($files);
-
-        $first = $files[0];
-        $last  = end($files);
+        $first = $orderedPaths[0];
+        $last  = end($orderedPaths);
         $isSame = ($first === $last);
 
         $firstMime = mime_content_type($first);
         $lastMime  = mime_content_type($last);
 
         if ($isSame) {
-            // Single page — apply both top and bottom in one merge
             $this->mergeBanner($first, $first, $firstMime, true, true);
         } else {
             $this->mergeBanner($first, $first, $firstMime, true, false);
