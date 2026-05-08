@@ -622,11 +622,18 @@ class Manga extends BaseController
         ]);
         $chapterId = $this->db->insertID();
 
-        // Insert images as pages
+        // Insert images as pages — validate each URL to prevent SSRF when
+        // the crawler later fetches them. Reject non-http(s), and reject
+        // hostnames that resolve to private/loopback/link-local IPs.
         if (!empty($images)) {
             $batch = [];
             $now = date('Y-m-d H:i:s');
+            $skipped = 0;
             foreach ($images as $k => $imgUrl) {
+                if (!is_string($imgUrl) || !$this->isPublicHttpUrl($imgUrl)) {
+                    $skipped++;
+                    continue;
+                }
                 $batch[] = [
                     'chapter_id' => $chapterId,
                     'slug'       => (string) ($k + 1),
@@ -636,7 +643,12 @@ class Manga extends BaseController
                     'updated_at' => $now,
                 ];
             }
-            $this->db->table('page')->insertBatch($batch);
+            if (!empty($batch)) {
+                $this->db->table('page')->insertBatch($batch);
+            }
+            if ($skipped > 0) {
+                log_message('warning', "apiInsertChapter: skipped {$skipped} unsafe image URLs for chapter {$chapterId}");
+            }
         }
 
         return $this->response->setJSON([
@@ -1042,6 +1054,14 @@ class Manga extends BaseController
             return $this->response->setJSON(['status' => 0]);
         }
 
+        // Rate limit: 1 view per manga+chapter per IP per 5 minutes
+        $ip = $this->request->getIPAddress();
+        $key = 'view_' . md5($ip . '|' . $mangaId . '|' . $chapterSlug);
+        if (cache($key)) {
+            return $this->response->setJSON(['status' => 1, 'cached' => 1]);
+        }
+        cache()->save($key, 1, 300);
+
         // Increment manga views
         $this->db->table('manga')->where('id', $mangaId)
             ->set('views', 'views + 1', false)
@@ -1225,5 +1245,54 @@ class Manga extends BaseController
         ]);
 
         return $this->response->setJSON(['status' => 'ok', 'message' => 'Report submitted']);
+    }
+
+    /**
+     * Validate URL is a public http(s) URL (not loopback/private/link-local).
+     * Used to prevent SSRF when fetching user-supplied URLs.
+     */
+    private function isPublicHttpUrl(string $url): bool
+    {
+        $url = trim($url);
+        if ($url === '' || strlen($url) > 2000) return false;
+        if (!filter_var($url, FILTER_VALIDATE_URL)) return false;
+
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['scheme']) || empty($parts['host'])) return false;
+
+        $scheme = strtolower($parts['scheme']);
+        if ($scheme !== 'http' && $scheme !== 'https') return false;
+
+        $host = strtolower($parts['host']);
+
+        // Block obvious literal hostnames
+        $blockedHosts = ['localhost', 'localhost.localdomain', 'ip6-localhost'];
+        if (in_array($host, $blockedHosts, true)) return false;
+
+        // If host is a literal IP, reject private/reserved ranges directly
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return $this->isPublicIp($host);
+        }
+
+        // Resolve hostname → reject if any A/AAAA points to private space
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (empty($records)) {
+            // Can't resolve — be safe and reject
+            return false;
+        }
+        foreach ($records as $r) {
+            $ip = $r['ip'] ?? $r['ipv6'] ?? '';
+            if ($ip && !$this->isPublicIp($ip)) return false;
+        }
+        return true;
+    }
+
+    private function isPublicIp(string $ip): bool
+    {
+        return (bool) filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
     }
 }
