@@ -252,9 +252,11 @@ if(typeof CMT==='undefined') window.CMT={};
     section.querySelectorAll('.cmt-reply-form').forEach(function(f){f.remove();});
     var item = $('cmt_'+inst+'_'+parentId);
     if(!item) return;
-    var mention = replyToUser ? '@' + decodeURIComponent(replyToUser) + ' ' : '';
+    // Escape decoded mention before inserting into textarea content — username with
+    // </textarea>...<script>... would otherwise break out of the textarea
+    var mention = replyToUser ? '@' + escHtml(decodeURIComponent(replyToUser)) + ' ' : '';
     var html = '<div class="cmt-reply-form" id="replyForm_'+inst+'_'+parentId+'">'
-      +'<div class="cmt-avatar" style="width:30px;height:30px;min-width:30px;font-size:13px;">'+userInitial+'</div>'
+      +'<div class="cmt-avatar" style="width:30px;height:30px;min-width:30px;font-size:13px;">'+escHtml(userInitial)+'</div>'
       +'<div style="flex:1;min-width:0;">'
       +'<textarea id="replyInput_'+inst+'_'+parentId+'" placeholder="Write a reply..." maxlength="2000">'+mention+'</textarea>'
       +'<div class="cmt-error" id="replyError_'+inst+'_'+parentId+'"></div>'
@@ -371,11 +373,14 @@ if(typeof CMT==='undefined') window.CMT={};
     acts += '<button class="cmt-act-like'+likeActive+'" id="likebtn_'+I+'_'+c.id+'" onclick="CMT[\''+I+'\'].like('+c.id+',\'like\')" title="Like"><i class="fa fa-thumbs-up"></i> <span id="likes_'+I+'_'+c.id+'">'+(c.likes||0)+'</span></button>';
     acts += '<button class="cmt-act-dislike'+dislikeActive+'" id="dislikebtn_'+I+'_'+c.id+'" onclick="CMT[\''+I+'\'].like('+c.id+',\'dislike\')" title="Dislike"><i class="fa fa-thumbs-down"></i> <span id="dislikes_'+I+'_'+c.id+'">'+(c.dislikes||0)+'</span></button>';
 
+    // encodeURIComponent does NOT escape ' so usernames with ' would break the
+    // single-quoted JS string inside the onclick handler. Force-encode it.
+    var safeName = encodeURIComponent(c.username || '').replace(/'/g, '%27');
     if(currentUserId && !isReply){
-      acts += '<button class="cmt-act-reply" onclick="CMT[\''+I+'\'].showReplyForm('+c.id+',\''+encodeURIComponent(c.username)+'\')"><i class="fa fa-reply"></i> Reply</button>';
+      acts += '<button class="cmt-act-reply" onclick="CMT[\''+I+'\'].showReplyForm('+c.id+',\''+safeName+'\')"><i class="fa fa-reply"></i> Reply</button>';
     }
     if(currentUserId && isReply){
-      acts += '<button class="cmt-act-reply" onclick="CMT[\''+I+'\'].showReplyForm('+(c.parent_comment||c.id)+',\''+encodeURIComponent(c.username)+'\')"><i class="fa fa-reply"></i> Reply</button>';
+      acts += '<button class="cmt-act-reply" onclick="CMT[\''+I+'\'].showReplyForm('+(c.parent_comment||c.id)+',\''+safeName+'\')"><i class="fa fa-reply"></i> Reply</button>';
     }
 
     var replyCount = (c.replies && c.replies.length) ? c.replies.length : 0;
@@ -455,7 +460,7 @@ if(typeof CMT==='undefined') window.CMT={};
     var wrap = $('cmtFormWrap_'+inst);
     if(!wrap) return;
     if(<?= $is_logged ? 'true' : 'false' ?>){
-      var avatarHtml = userAvatar ? '<img src="'+userAvatar+'" alt="">' : '<i class="fa fa-user"></i>';
+      var avatarHtml = userAvatar ? '<img src="'+escHtml(userAvatar)+'" alt="">' : '<i class="fa fa-user"></i>';
       wrap.innerHTML = '<div class="cmt-form">'
         +'<div class="cmt-form-avatar">'+avatarHtml+'</div>'
         +'<div class="cmt-form-body">'
