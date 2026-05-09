@@ -784,6 +784,14 @@ class Manga extends BaseController
             $referer = parse_url($coverUrl, PHP_URL_SCHEME) . '://' . parse_url($coverUrl, PHP_URL_HOST) . '/';
         }
 
+        // Percent-encode raw non-ASCII bytes so URLs with Korean/Japanese chars
+        // don't trigger HTTP 400.
+        $coverUrl = preg_replace_callback(
+            '/[\x80-\xff]/',
+            static fn($m) => rawurlencode($m[0]),
+            $coverUrl
+        );
+
         $ch = curl_init($coverUrl);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
