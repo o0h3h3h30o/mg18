@@ -1391,7 +1391,15 @@ class Crawl extends \CodeIgniter\Controller
     {
         $proxy = $this->getRandomProxy();
 
-        $ch = curl_init(trim($url));
+        // Percent-encode raw non-ASCII bytes so URLs with Korean/Japanese
+        // chars in the path don't trigger HTTP 400 from the source server.
+        $url = preg_replace_callback(
+            '/[\x80-\xff]/',
+            static fn($m) => rawurlencode($m[0]),
+            trim($url)
+        );
+
+        $ch = curl_init($url);
         if ($proxy) {
             curl_setopt($ch, CURLOPT_PROXY, $proxy);
         }

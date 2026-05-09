@@ -368,6 +368,11 @@ class PageController extends BaseController
 
         $url = $page->image;
 
+        // Percent-encode any non-ASCII bytes in path/query so URLs containing
+        // raw Korean/Japanese/Vietnamese characters are valid HTTP request lines.
+        // Already-encoded sequences (%XX) are preserved.
+        $url = $this->encodeUrlAscii($url);
+
         // Download image with curl
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -507,5 +512,21 @@ class PageController extends BaseController
         }
 
         return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('error', 'No pages selected.');
+    }
+
+    /**
+     * Percent-encode any non-ASCII bytes in a URL so the resulting string is a
+     * valid HTTP request line. Bytes 0x00-0x7F (ASCII) — including already-
+     * encoded %XX sequences and reserved chars (?, &, =, /, :, etc.) — are
+     * preserved. Only high bytes (0x80-0xFF, e.g. raw UTF-8 of Korean /
+     * Japanese / Vietnamese chars) get rawurlencoded.
+     */
+    private function encodeUrlAscii(string $url): string
+    {
+        return preg_replace_callback(
+            '/[\x80-\xff]/',
+            static fn($m) => rawurlencode($m[0]),
+            $url
+        );
     }
 }
