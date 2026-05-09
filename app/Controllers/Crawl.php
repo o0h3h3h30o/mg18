@@ -1391,12 +1391,14 @@ class Crawl extends \CodeIgniter\Controller
     {
         $proxy = $this->getRandomProxy();
 
-        // Percent-encode raw non-ASCII bytes so URLs with Korean/Japanese
-        // chars in the path don't trigger HTTP 400 from the source server.
+        // Normalize URL: decode HTML entities (&#039; etc.) then percent-encode
+        // bytes that aren't safe in an HTTP request line — non-ASCII (Korean,
+        // Japanese, Vietnamese...), SPACE, apostrophe and double-quote.
+        $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         $url = preg_replace_callback(
-            '/[\x80-\xff]/',
+            '/[\x80-\xff\x20\x22\x27]/',
             static fn($m) => rawurlencode($m[0]),
-            trim($url)
+            $url
         );
 
         $ch = curl_init($url);

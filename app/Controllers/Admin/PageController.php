@@ -515,16 +515,26 @@ class PageController extends BaseController
     }
 
     /**
-     * Percent-encode any non-ASCII bytes in a URL so the resulting string is a
-     * valid HTTP request line. Bytes 0x00-0x7F (ASCII) — including already-
-     * encoded %XX sequences and reserved chars (?, &, =, /, :, etc.) — are
-     * preserved. Only high bytes (0x80-0xFF, e.g. raw UTF-8 of Korean /
-     * Japanese / Vietnamese chars) get rawurlencoded.
+     * Normalize an image URL so the resulting string is a valid HTTP request
+     * line. Steps:
+     *   1. Decode HTML entities (&#039;, &amp;, &quot; ...) in case the URL
+     *      came from raw HTML and was stored without entity-decode.
+     *   2. Trim whitespace.
+     *   3. Percent-encode bytes that aren't safe in a request URI:
+     *      - All non-ASCII bytes (0x80-0xFF)  → Korean / Japanese / Vietnamese
+     *      - SPACE (0x20)                     → would otherwise be interpreted
+     *        as the URI/version separator
+     *      - Apostrophe (0x27) and double-quote (0x22) → safe in RFC 3986 but
+     *        a few CDNs / WAFs reject them; encoding is harmless
+     *      - Already-encoded %XX sequences are preserved (% is in the keep set
+     *        and the regex doesn't match it).
      */
     private function encodeUrlAscii(string $url): string
     {
+        $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
         return preg_replace_callback(
-            '/[\x80-\xff]/',
+            '/[\x80-\xff\x20\x22\x27]/',
             static fn($m) => rawurlencode($m[0]),
             $url
         );
