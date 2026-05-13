@@ -620,7 +620,7 @@ class Crawl extends \CodeIgniter\Controller
 
         $dom = HtmlDomParser::str_get_html($html);
         $data = $this->parseManhwaReadPage($dom);
-        $chapters = $this->parseManhwaReadChapters($dom);
+        $chapters = $this->parseManhwaReadChapters($dom, $sourceUrl);
 
         if (!$data['name']) {
             echo "FAILED: Could not parse manga name.\n";
@@ -809,19 +809,43 @@ class Crawl extends \CodeIgniter\Controller
     }
 
     /**
-     * Parse chapter list from manhwaread.
-     * Selector: <a class="chapter-item" href="/manhwa/xxx/chapter-NN/">
-     * Deduplicates by chapter number.
+     * Parse chapter list from manhwaread for one series.
+     *
+     * The series page has TWO sets of `a.chapter-item`:
+     *   1. The real chapter list inside #chaptersList
+     *   2. "Related / recommended manga" cards at the bottom which each
+     *      include 1-2 latest chapters of OTHER manga, also using the
+     *      .chapter-item class.
+     * To avoid mixing those in (and skipping legitimate chapters of our
+     * series because their number happens to match), we scope the search
+     * to #chaptersList AND only accept hrefs whose path starts with
+     * /manhwa/<series-slug>/.
      */
-    private function parseManhwaReadChapters($dom): array
+    private function parseManhwaReadChapters($dom, string $sourceUrl): array
     {
+        $seriesSlug = basename(rtrim(parse_url($sourceUrl, PHP_URL_PATH) ?? '', '/'));
+        if ($seriesSlug === '') return [];
+        $expectedPrefix = '/manhwa/' . $seriesSlug . '/';
+
+        // Prefer the explicit chapter-list container; fall back to a
+        // site-wide query filtered by URL prefix if the container ID isn't
+        // there for some reason.
+        $list = $dom->find('#chaptersList', 0);
+        $links = $list ? $list->find('a.chapter-item') : $dom->find('a.chapter-item');
+
         $chapters = [];
         $seenUrl = [];
         $seenNumber = [];
 
-        foreach ($dom->find('a.chapter-item') as $a) {
+        foreach ($links as $a) {
             $href = trim($a->href ?? '');
-            if (!$href || isset($seenUrl[$href])) continue;
+            if (!$href) continue;
+
+            // Reject anything outside this series
+            $path = parse_url($href, PHP_URL_PATH) ?? $href;
+            if (!str_starts_with($path, $expectedPrefix)) continue;
+
+            if (isset($seenUrl[$href])) continue;
             $seenUrl[$href] = true;
 
             $number = $this->extractChapterNumberFromManhwaRead($href);
