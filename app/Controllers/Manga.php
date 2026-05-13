@@ -899,6 +899,11 @@ class Manga extends BaseController
         $data = $this->getCommonData();
         $data['ads'] = $this->getAds(1);
 
+        // Page can come from URL segment (/list-manga/2) OR GET (?page=2)
+        // since the pager builds search links with ?page= alongside the filter.
+        if ($page === null || $page === '') {
+            $page = $this->request->getGet('page');
+        }
         $page = (int)($page ?? 0);
 
         $data['heading_title'] = 'Manga List';
