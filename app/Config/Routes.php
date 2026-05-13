@@ -89,12 +89,14 @@ $routes->get('crawl', 'Crawl::index');
 $routes->get('crawlChapter', 'Crawl::crawlChapter');
 $routes->get('crawlChapter2', 'Crawl::crawlChapter2');
 $routes->get('mangadistrict', 'Crawl::mangadistrict');
+$routes->get('manhwaread', 'Crawl::manhwaread');
 
 // CLI crawl routes
 $routes->cli('crawl/index', 'Crawl::index');
 $routes->cli('crawl/crawlChapter', 'Crawl::crawlChapter');
 $routes->cli('crawl/crawlChapter2', 'Crawl::crawlChapter2');
 $routes->cli('crawl/mangadistrict', 'Crawl::mangadistrict');
+$routes->cli('crawl/manhwaread', 'Crawl::manhwaread');
 $routes->cli('crawl/resetView', 'Crawl::resetView');
 
 // Admin panel

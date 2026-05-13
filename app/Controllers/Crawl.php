@@ -111,6 +111,8 @@ class Crawl extends \CodeIgniter\Controller
                 $this->crawlChapterFromManga18fx($item, $manga);
             } elseif (str_contains($item->source_url, 'mangadistrict')) {
                 $this->crawlChapterFromMangaDistrict($item, $manga);
+            } elseif (str_contains($item->source_url, 'manhwaread')) {
+                $this->crawlChapterFromManhwaRead($item, $manga);
             } else {
                 echo "Unknown source: {$item->source_url}\n";
             }
@@ -572,6 +574,388 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         return 0;
+    }
+
+    // =========================================================================
+    // MANHWAREAD SOURCE
+    // =========================================================================
+
+    /**
+     * Crawl single manga from manhwaread by URL
+     * Usage: /crawl/manhwaread?url=https://manhwaread.com/manhwa/landlord-sisters/
+     */
+    public function manhwaread()
+    {
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', '0');
+
+        $sourceUrl = trim($this->request->getGet('url') ?? '');
+        if (!$sourceUrl || !str_contains($sourceUrl, 'manhwaread.com')) {
+            echo "Usage: /crawl/manhwaread?url=https://manhwaread.com/manhwa/xxx/\n";
+            return;
+        }
+
+        echo "=== ManhwaRead Crawl ===\n";
+        echo "URL: {$sourceUrl}\n\n";
+
+        $html = $this->fetchUrl($sourceUrl, 'https://manhwaread.com');
+        if (!$html) {
+            echo "FAILED: Could not fetch page.\n";
+            return;
+        }
+
+        $dom = HtmlDomParser::str_get_html($html);
+        $data = $this->parseManhwaReadPage($dom);
+        $chapters = $this->parseManhwaReadChapters($dom);
+
+        if (!$data['name']) {
+            echo "FAILED: Could not parse manga name.\n";
+            return;
+        }
+
+        echo "Title: {$data['name']}\n";
+        echo "Alt: {$data['otherNames']}\n";
+        echo "Author: {$data['author']} | Artist: {$data['artist']}\n";
+        echo "Categories: " . implode(', ', $data['categories']) . "\n";
+        echo "Chapters found: " . count($chapters) . "\n";
+        echo "Cover: {$data['image']}\n\n";
+
+        // Match existing manga by URL slug (last segment of path)
+        // e.g. https://manhwaread.com/manhwa/landlord-sisters/ -> "landlord-sisters"
+        $urlSlug = basename(rtrim(parse_url($sourceUrl, PHP_URL_PATH) ?? '', '/'));
+        $existingManga = null;
+        if ($urlSlug !== '') {
+            $existingManga = $this->db->table('manga')
+                ->like('from_manga18fx', '/' . $urlSlug)
+                ->get()->getRow();
+        }
+        if (!$existingManga) {
+            $existingManga = $this->findMangaByName($data['name']);
+        }
+
+        if ($existingManga) {
+            $mangaId = $existingManga->id;
+            $slug = $existingManga->slug;
+
+            $links = $existingManga->from_manga18fx ?? '';
+            if (!str_contains($links, $sourceUrl)) {
+                $links = rtrim($links, ',') . ',' . $sourceUrl . ',';
+            }
+
+            $this->db->table('manga')->where('id', $mangaId)->update([
+                'from_manga18fx' => $links,
+                '_authors'       => $data['author'],
+                '_artists'       => $data['artist'],
+                'summary'        => $data['summary'],
+                'updated_at'     => date('Y-m-d H:i:s'),
+            ]);
+            echo "=> Updated existing manga #{$mangaId} - {$existingManga->name}\n\n";
+        } else {
+            $slug = $this->slugify($data['name']);
+            $existSlug = $this->db->table('manga')->where('slug', $slug)->countAllResults();
+            if ($existSlug > 0) {
+                $slug .= '-' . time();
+            }
+
+            $this->db->table('manga')->insert([
+                'name'           => $data['name'],
+                'otherNames'     => $data['otherNames'],
+                'from_manga18fx' => $sourceUrl . ',',
+                'is_public'      => 1,
+                'cover'          => 1,
+                'user_id'        => 1,
+                'status_id'      => 1,
+                'slug'           => $slug,
+                '_authors'       => $data['author'],
+                '_artists'       => $data['artist'],
+                'summary'        => $data['summary'],
+                'created_at'     => date('Y-m-d H:i:s'),
+                'updated_at'     => date('Y-m-d H:i:s'),
+            ]);
+            $mangaId = $this->db->insertID();
+
+            if ($data['image']) {
+                $this->downloadCoverFrom($slug, $data['image'], 'https://manhwaread.com/');
+            }
+
+            $this->insertCategories($mangaId, $data['categories']);
+            if ($data['author']) $this->insertAuthorsArtists($mangaId, $data['author'], 1);
+            if ($data['artist']) $this->insertAuthorsArtists($mangaId, $data['artist'], 2);
+
+            echo "=> Created manga #{$mangaId} - {$data['name']} (slug: {$slug})\n\n";
+        }
+
+        // Insert chapters
+        $inserted = 0;
+        $skipped = 0;
+        foreach ($chapters as $chUrl) {
+            $number = $this->extractChapterNumberFromManhwaRead($chUrl);
+            if ($number <= 0) {
+                echo "  ? Skip (no number): {$chUrl}\n";
+                continue;
+            }
+
+            $exists = $this->db->table('chapter')
+                ->where('number', $number)
+                ->where('manga_id', $mangaId)
+                ->countAllResults();
+            if ($exists > 0) {
+                $skipped++;
+                continue;
+            }
+
+            $chSlug = 'chapter-' . str_replace('.', '-', (string) $number);
+
+            $this->db->table('chapter')->insert([
+                'slug'        => $chSlug,
+                'name'        => 'Chapter ' . $number,
+                'number'      => $number,
+                'volume'      => 0,
+                'manga_id'    => $mangaId,
+                'user_id'     => 1,
+                'created_at'  => date('Y-m-d H:i:s'),
+                'updated_at'  => date('Y-m-d H:i:s'),
+                'view'        => 0,
+                'is_show'     => 0,
+                'is_crawling' => 0,
+                'source_url'  => $chUrl,
+            ]);
+            echo "  + Chapter {$number} ({$chUrl})\n";
+            $inserted++;
+        }
+
+        if ($inserted > 0) {
+            $this->updateMangaLatestChapters($mangaId);
+        }
+
+        echo "\n=== Done === inserted: {$inserted}, skipped existing: {$skipped}\n";
+    }
+
+    /**
+     * Parse manhwaread series detail page (custom theme — not Madara)
+     * Structure:
+     *   - Title:        h1 inside .manga-titles
+     *   - Other names:  h2 inside .manga-titles
+     *   - Cover:        first <img> in #mangaSummary  (also og:image meta)
+     *   - Description:  #mangaDesc .manga-desc__content > p
+     *   - Genres:       .manga-genres > a (text)
+     *   - Author/Artist/Tags: <a href="/author/..."> or "/artist/..." > <span class="text-gray-100">Name</span>
+     */
+    private function parseManhwaReadPage($dom): array
+    {
+        $data = [
+            'name' => '', 'otherNames' => '', 'author' => '',
+            'artist' => '', 'summary' => '', 'image' => '', 'categories' => [],
+        ];
+
+        $clean = fn($s) => trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($s, ENT_QUOTES, 'UTF-8'))));
+
+        // Title
+        $titleEl = $dom->find('section#mangaSummary .manga-titles h1', 0);
+        if (!$titleEl) $titleEl = $dom->find('h1.text-3xl', 0);
+        if ($titleEl) $data['name'] = $clean($titleEl->innertext);
+
+        // Other names
+        $altEl = $dom->find('section#mangaSummary .manga-titles h2', 0);
+        if ($altEl) $data['otherNames'] = $clean($altEl->innertext);
+
+        // Cover image — prefer og:image (highest quality), fallback to first img in section
+        $og = $dom->find('meta[property="og:image"]', 0);
+        if ($og) $data['image'] = trim($og->getAttribute('content') ?? '');
+        if (!$data['image']) {
+            $coverEl = $dom->find('section#mangaSummary img', 0);
+            if ($coverEl) {
+                $data['image'] = trim($coverEl->getAttribute('data-src') ?: $coverEl->getAttribute('src') ?: '');
+            }
+        }
+
+        // Description
+        $descEl = $dom->find('#mangaDesc .manga-desc__content', 0);
+        if ($descEl) $data['summary'] = $clean($descEl->innertext);
+
+        // Genres
+        $genres = [];
+        foreach ($dom->find('.manga-genres a') as $a) {
+            $name = $clean($a->innertext);
+            if ($name) $genres[] = $name;
+        }
+        $data['categories'] = array_values(array_unique($genres));
+
+        // Author / Artist — look for <a href="/author/..."> and <a href="/artist/...">
+        $authors = [];
+        $artists = [];
+        foreach ($dom->find('a[rel="tag"]') as $a) {
+            $href = $a->getAttribute('href') ?? '';
+            $span = $a->find('span', 0);
+            if (!$span) continue;
+            $name = $clean($span->innertext);
+            if (!$name) continue;
+            if (str_contains($href, '/author/')) $authors[] = $name;
+            elseif (str_contains($href, '/artist/')) $artists[] = $name;
+        }
+        $data['author'] = implode(', ', array_unique($authors));
+        $data['artist'] = implode(', ', array_unique($artists));
+
+        return $data;
+    }
+
+    /**
+     * Parse chapter list from manhwaread.
+     * Selector: <a class="chapter-item" href="/manhwa/xxx/chapter-NN/">
+     * Deduplicates by chapter number.
+     */
+    private function parseManhwaReadChapters($dom): array
+    {
+        $chapters = [];
+        $seenUrl = [];
+        $seenNumber = [];
+
+        foreach ($dom->find('a.chapter-item') as $a) {
+            $href = trim($a->href ?? '');
+            if (!$href || isset($seenUrl[$href])) continue;
+            $seenUrl[$href] = true;
+
+            $number = $this->extractChapterNumberFromManhwaRead($href);
+            if ($number <= 0) continue;
+
+            $numKey = (string) $number;
+            if (isset($seenNumber[$numKey])) continue;
+            $seenNumber[$numKey] = true;
+
+            // Normalize to absolute URL
+            if (str_starts_with($href, '/')) {
+                $href = 'https://manhwaread.com' . $href;
+            }
+            $chapters[] = $href;
+        }
+
+        return $chapters;
+    }
+
+    /**
+     * Extract chapter number from manhwaread URL.
+     *   chapter-01                       → 1
+     *   chapter-001                      → 1
+     *   chapter-156x5-epilogue-the-end   → 156.5
+     *   chapter-156-side-story-18        → 156
+     */
+    private function extractChapterNumberFromManhwaRead(string $url): float
+    {
+        $parts = explode('/', trim($url, '/'));
+        $chapterPart = '';
+        foreach (array_reverse($parts) as $part) {
+            if (str_contains($part, 'chapter')) {
+                $chapterPart = $part;
+                break;
+            }
+        }
+        if (!$chapterPart) return 0;
+
+        // Match main number, optional 'xN' subchapter (e.g. 156x5)
+        if (preg_match('/chapter-?(\d+)(?:x(\d+))?/i', $chapterPart, $m)) {
+            if (!empty($m[2])) {
+                return (float) ($m[1] . '.' . $m[2]);
+            }
+            return (float) $m[1];
+        }
+        return 0;
+    }
+
+    /**
+     * Crawl one chapter from manhwaread.
+     * Chapter reader page embeds image list inside:
+     *   var chapterData = {"data":"<base64 JSON>","base":"https://manread.xyz/<mangaId>"};
+     * The decoded data is an array of {"src":"<chapterId>/mr_001.jpg","w":...,"h":...}
+     * Full image URL = base + "/" + src
+     */
+    private function crawlChapterFromManhwaRead(object $chapter, object $manga): void
+    {
+        $html = $this->fetchUrl($chapter->source_url, 'https://manhwaread.com');
+        if (!$html) {
+            echo "  Failed to fetch manhwaread chapter page.\n";
+            return;
+        }
+
+        // Extract chapterData JS variable
+        if (!preg_match('/var\s+chapterData\s*=\s*(\{[^;]+\})\s*;/', $html, $m)) {
+            echo "  No chapterData found.\n";
+            return;
+        }
+
+        $obj = json_decode($m[1], true);
+        if (!is_array($obj) || empty($obj['data']) || empty($obj['base'])) {
+            echo "  Invalid chapterData object.\n";
+            return;
+        }
+
+        $decoded = base64_decode($obj['data'], true);
+        if ($decoded === false) {
+            echo "  Failed to base64-decode chapterData.\n";
+            return;
+        }
+        $pages = json_decode($decoded, true);
+        if (!is_array($pages) || empty($pages)) {
+            echo "  No pages in decoded chapterData.\n";
+            return;
+        }
+
+        $base = rtrim($obj['base'], '/');
+
+        // Set crawling status
+        $this->db->table('chapter')->where('id', $chapter->id)->update(['is_crawling' => 1]);
+
+        // Prepare chapter directory
+        $chapterDir = $this->savePath . $manga->slug . '/chapters/' . $chapter->slug . '/';
+        @mkdir($chapterDir, 0755, true);
+
+        $index = 1;
+        $successCount = 0;
+        $savedPaths = [];
+
+        foreach ($pages as $p) {
+            $src = $p['src'] ?? '';
+            if (!$src) continue;
+
+            $imgUrl = $base . '/' . ltrim($src, '/');
+            $ext = $this->getImageExtension($imgUrl);
+            $pageName = str_pad($index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
+
+            echo "  Downloading page {$index}: " . substr($imgUrl, 0, 80) . "...\n";
+
+            $imageData = $this->fetchImageData($imgUrl, 'https://manhwaread.com/');
+            if (!$imageData) {
+                echo "  FAILED: page {$index}\n";
+                $index++;
+                continue;
+            }
+
+            $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
+
+            $this->db->table('page')->insert([
+                'slug'       => $index,
+                'image'      => $finalName,
+                'external'   => 0,
+                'chapter_id' => $chapter->id,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $savedPaths[] = $chapterDir . $finalName;
+            $successCount++;
+            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
+            $index++;
+        }
+
+        // Apply banner to first/last actual saved page
+        $this->applyBannerToFiles($savedPaths);
+
+        $this->db->table('chapter')->where('id', $chapter->id)->update([
+            'is_crawling' => 0,
+            'is_show'     => 1,
+        ]);
+        $this->updateMangaLatestChapters($chapter->manga_id);
+
+        echo "  Completed: {$successCount} pages downloaded.\n";
     }
 
     /**
