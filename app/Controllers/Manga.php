@@ -355,15 +355,18 @@ class Manga extends BaseController
         // Check existing manga: 1) exact name match, 2) slug from URL match in from_manga18fx
         $existing = $this->db->table('manga')->where('name', $name)->get()->getRow();
 
-        // If not found by name, try matching by URL slug (last segment)
-        // e.g. https://mangadistrict.com/series/secret-class -> match "secret-class"
+        // If not found by name, try matching by URL slug (last segment).
+        // Require a delimiter after the slug so '/save-diary' doesn't also
+        // match '/save-diary-raw'.
         if (!$existing && $sourceLink) {
-            $urlSlug = rtrim(parse_url($sourceLink, PHP_URL_PATH) ?? '', '/');
-            $urlSlug = basename($urlSlug); // last segment only
+            $urlSlug = basename(rtrim(parse_url($sourceLink, PHP_URL_PATH) ?? '', '/'));
             if ($urlSlug) {
-                // Search for any manga that has this slug in from_manga18fx
                 $existing = $this->db->table('manga')
-                    ->like('from_manga18fx', '/' . $urlSlug)
+                    ->groupStart()
+                        ->like('from_manga18fx', '/' . $urlSlug . '/')
+                        ->orLike('from_manga18fx', '/' . $urlSlug . ',')
+                        ->orLike('from_manga18fx', '/' . $urlSlug . '?')
+                    ->groupEnd()
                     ->get()->getRow();
             }
         }
@@ -573,11 +576,16 @@ class Manga extends BaseController
             ->get()->getRow();
 
         if (!$manga) {
-            // Try matching by last slug segment (handles mangadistrict URL changes)
+            // Try matching by last slug segment with strict delimiter so e.g.
+            // 'save-diary' doesn't also match 'save-diary-raw'.
             $urlSlug = basename(rtrim(parse_url($fromLink, PHP_URL_PATH) ?? '', '/'));
             if ($urlSlug) {
                 $manga = $this->db->table('manga')
-                    ->like('from_manga18fx', '/' . $urlSlug)
+                    ->groupStart()
+                        ->like('from_manga18fx', '/' . $urlSlug . '/')
+                        ->orLike('from_manga18fx', '/' . $urlSlug . ',')
+                        ->orLike('from_manga18fx', '/' . $urlSlug . '?')
+                    ->groupEnd()
                     ->get()->getRow();
             }
         }

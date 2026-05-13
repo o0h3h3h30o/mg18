@@ -305,12 +305,7 @@ class Crawl extends \CodeIgniter\Controller
         // so different host prefixes or extra query params still resolve to the same manga.
         // e.g. https://mangadistrict.com/series/secret-class-uncensored-fan-edition/ -> "secret-class-uncensored-fan-edition"
         $urlSlug = basename(rtrim(parse_url($sourceUrl, PHP_URL_PATH) ?? '', '/'));
-        $existingManga = null;
-        if ($urlSlug !== '') {
-            $existingManga = $this->db->table('manga')
-                ->like('from_manga18fx', '/' . $urlSlug)
-                ->get()->getRow();
-        }
+        $existingManga = $this->findMangaByUrlSlug($urlSlug);
         if (!$existingManga) {
             $existingManga = $this->findMangaByName($data['name']);
         }
@@ -642,12 +637,7 @@ class Crawl extends \CodeIgniter\Controller
         // Match existing manga by URL slug (last segment of path)
         // e.g. https://manhwaread.com/manhwa/landlord-sisters/ -> "landlord-sisters"
         $urlSlug = basename(rtrim(parse_url($sourceUrl, PHP_URL_PATH) ?? '', '/'));
-        $existingManga = null;
-        if ($urlSlug !== '') {
-            $existingManga = $this->db->table('manga')
-                ->like('from_manga18fx', '/' . $urlSlug)
-                ->get()->getRow();
-        }
+        $existingManga = $this->findMangaByUrlSlug($urlSlug);
         if (!$existingManga) {
             $existingManga = $this->findMangaByName($data['name']);
         }
@@ -1465,6 +1455,26 @@ class Crawl extends \CodeIgniter\Controller
     {
         return $this->db->table('manga')
             ->where('name', $name)
+            ->get()->getRow();
+    }
+
+    /**
+     * Find a manga whose from_manga18fx (a CSV of source URLs) contains an
+     * entry ending with the given slug. We require a delimiter right after
+     * the slug so '/save-diary' does NOT also match '/save-diary-raw'.
+     * Common delimiters in stored URLs are '/' (trailing slash), ',' (CSV
+     * separator) and '?' (query string).
+     */
+    private function findMangaByUrlSlug(string $urlSlug): ?object
+    {
+        $urlSlug = trim($urlSlug);
+        if ($urlSlug === '') return null;
+        return $this->db->table('manga')
+            ->groupStart()
+                ->like('from_manga18fx', '/' . $urlSlug . '/')
+                ->orLike('from_manga18fx', '/' . $urlSlug . ',')
+                ->orLike('from_manga18fx', '/' . $urlSlug . '?')
+            ->groupEnd()
             ->get()->getRow();
     }
 
