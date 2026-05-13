@@ -373,6 +373,11 @@ class PageController extends BaseController
         // Already-encoded sequences (%XX) are preserved.
         $url = $this->encodeUrlAscii($url);
 
+        // Pick the proper referer. CDN image URLs (manread.xyz,
+        // cdn.mangadistrict.com, etc.) usually require the original site as
+        // referer — sending the CDN domain itself yields 403/placeholder.
+        $referer = $this->resolveReferer($url, $chapter->source_url ?? '');
+
         // Download image with curl
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -381,7 +386,7 @@ class PageController extends BaseController
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            CURLOPT_REFERER        => parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST) . '/',
+            CURLOPT_REFERER        => $referer,
         ]);
         $imageData = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -512,6 +517,39 @@ class PageController extends BaseController
         }
 
         return redirect()->to('/admin/chapters/edit/' . $chapterId)->with('error', 'No pages selected.');
+    }
+
+    /**
+     * Pick the correct Referer header for an image URL.
+     * CDN image hosts (manread.xyz, cdn.mangadistrict.com…) require the
+     * original site as referer — sending the CDN itself returns 403 or a
+     * placeholder. We map by:
+     *   1. CDN/image-URL substring (most reliable)
+     *   2. The chapter's source_url host as a fallback
+     *   3. The image URL's own host (last resort)
+     */
+    private function resolveReferer(string $imgUrl, string $sourceUrl = ''): string
+    {
+        $hay = $imgUrl . '|' . $sourceUrl;
+        if (str_contains($hay, 'manread.xyz') || str_contains($hay, 'manhwaread')) {
+            return 'https://manhwaread.com/';
+        }
+        if (str_contains($hay, 'mangadistrict') || str_contains($imgUrl, 'cdn.mangadistrict')) {
+            return 'https://mangadistrict.com/';
+        }
+        if (str_contains($hay, 'newtoki') || str_contains($hay, 'manatoki')) {
+            return 'https://newtoki468.com/';
+        }
+        if (str_contains($hay, 'manga18fx')) {
+            return 'https://manga18fx.com/';
+        }
+        if (str_contains($hay, 'toonflix')) {
+            return 'https://toonflix.app/';
+        }
+        // Fallback: root of the image URL host
+        $scheme = parse_url($imgUrl, PHP_URL_SCHEME) ?: 'https';
+        $host = parse_url($imgUrl, PHP_URL_HOST) ?: '';
+        return $host ? "{$scheme}://{$host}/" : '';
     }
 
     /**

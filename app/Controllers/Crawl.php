@@ -192,10 +192,14 @@ class Crawl extends \CodeIgniter\Controller
                 $ext = $this->getImageExtension($imageUrl);
                 $pageName = str_pad($page->slug, 3, '0', STR_PAD_LEFT) . '.' . $ext;
 
-                // Determine referer based on source
+                // Determine referer based on image URL or chapter source_url
                 $referer = 'https://manga18fx.com/';
                 if (str_contains($imageUrl, 'newtoki') || str_contains($imageUrl, 'manatoki')) {
                     $referer = 'https://newtoki468.com/';
+                } elseif (str_contains($imageUrl, 'manread.xyz') || str_contains((string)($item->source_url ?? ''), 'manhwaread')) {
+                    $referer = 'https://manhwaread.com/';
+                } elseif (str_contains($imageUrl, 'mangadistrict') || str_contains((string)($item->source_url ?? ''), 'mangadistrict')) {
+                    $referer = 'https://mangadistrict.com/';
                 }
 
                 $rawdata = $this->fetchImageData($imageUrl, $referer);
