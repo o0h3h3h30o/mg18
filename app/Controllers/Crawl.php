@@ -242,8 +242,16 @@ class Crawl extends \CodeIgniter\Controller
     }
 
     /**
-     * Crawl single manga from mangadistrict by URL
-     * Usage: /crawl/mangadistrict?url=https://mangadistrict.com/series/cuck-thology/
+     * Crawl single manga from a supported source by URL.
+     * Routes to the appropriate handler based on the URL host.
+     *
+     * Supported sources:
+     *   - mangadistrict.com  -> mangadistrict flow (Madara theme)
+     *   - manhwaread.com     -> manhwaread flow (custom theme)
+     *
+     * Usage:
+     *   /crawl/mangadistrict?url=https://mangadistrict.com/series/cuck-thology/
+     *   /crawl/mangadistrict?url=https://manhwaread.com/manhwa/landlord-sisters/
      */
     public function mangadistrict()
     {
@@ -251,8 +259,15 @@ class Crawl extends \CodeIgniter\Controller
         ini_set('max_execution_time', '0');
 
         $sourceUrl = trim($this->request->getGet('url') ?? '');
+
+        // Auto-dispatch to manhwaread handler when URL belongs there
+        if ($sourceUrl && str_contains($sourceUrl, 'manhwaread.com')) {
+            $this->manhwaread();
+            return;
+        }
+
         if (!$sourceUrl || !str_contains($sourceUrl, 'mangadistrict.com')) {
-            echo "Usage: /crawl/mangadistrict?url=https://mangadistrict.com/series/xxx/\n";
+            echo "Usage: /crawl/mangadistrict?url=<mangadistrict.com|manhwaread.com URL>\n";
             return;
         }
 
