@@ -1463,10 +1463,8 @@ class Crawl extends \CodeIgniter\Controller
 
     private function findMangaByName(string $name): ?object
     {
-        $otherName = str_replace("'", "\u{2019}", $name);
         return $this->db->table('manga')
             ->where('name', $name)
-            ->orWhere('name', $otherName)
             ->get()->getRow();
     }
 
