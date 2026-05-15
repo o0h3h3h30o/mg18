@@ -1731,6 +1731,9 @@ class Crawl extends \CodeIgniter\Controller
      */
     private function saveAndOptimizeImage(string $imageData, string $savePath, string $filename): string
     {
+        $maxWidth    = 720;
+        $targetBytes = 1024 * 1024; // 1MB
+
         // Ensure directory exists with proper permissions
         if (!is_dir($savePath)) {
             @mkdir($savePath, 0755, true);
@@ -1778,27 +1781,31 @@ class Crawl extends \CodeIgniter\Controller
 
         echo "    Image {$filename}: " . round($sizeKB) . "KB ({$origW}x{$origH}) - optimizing...\n";
 
-        // Step 1: Resize if width > 1200px (manga pages don't need more)
-        if ($origW > 1200) {
-            $ratio = 1200 / $origW;
-            $newW = 1200;
-            $newH = (int) round($origH * $ratio);
+        // Step 1: Resize if width > 720px
+        $curW = $origW;
+        $curH = $origH;
+        if ($curW > $maxWidth) {
+            $ratio = $maxWidth / $curW;
+            $newW = $maxWidth;
+            $newH = (int) round($curH * $ratio);
             $resized = imagecreatetruecolor($newW, $newH);
             imagealphablending($resized, false);
             imagesavealpha($resized, true);
-            imagecopyresampled($resized, $srcImage, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+            imagecopyresampled($resized, $srcImage, 0, 0, 0, 0, $newW, $newH, $curW, $curH);
             imagedestroy($srcImage);
             $srcImage = $resized;
-            echo "    Resized: {$origW}x{$origH} -> {$newW}x{$newH}\n";
+            $curW = $newW;
+            $curH = $newH;
+            echo "    Resized: {$origW}x{$origH} -> {$curW}x{$curH}\n";
         }
 
-        // Step 2: Save as WebP, try decreasing quality until < 1MB
+        // Step 2: Save as WebP, try decreasing quality until under target
         $webpName = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
         $webpPath = $savePath . $webpName;
-        $targetBytes = 1024 * 1024; // 1MB
 
         foreach ([85, 75, 65, 50] as $quality) {
             imagewebp($srcImage, $webpPath, $quality);
+            clearstatcache(true, $webpPath);
             $newSize = filesize($webpPath);
             if ($newSize <= $targetBytes) {
                 echo "    -> " . round($newSize / 1024) . "KB (WebP q{$quality})\n";
@@ -1806,8 +1813,32 @@ class Crawl extends \CodeIgniter\Controller
             }
         }
 
+        // Step 3: Still over 1MB after q50 — progressively shrink resolution
+        clearstatcache(true, $webpPath);
+        if (filesize($webpPath) > $targetBytes) {
+            foreach ([0.75, 0.5, 0.35] as $scale) {
+                $shrinkW = (int) round($curW * $scale);
+                $shrinkH = (int) round($curH * $scale);
+                if ($shrinkW < 360) break;
+
+                $shrunk = imagecreatetruecolor($shrinkW, $shrinkH);
+                imagealphablending($shrunk, false);
+                imagesavealpha($shrunk, true);
+                imagecopyresampled($shrunk, $srcImage, 0, 0, 0, 0, $shrinkW, $shrinkH, $curW, $curH);
+
+                imagewebp($shrunk, $webpPath, 50);
+                imagedestroy($shrunk);
+                clearstatcache(true, $webpPath);
+                $newSize = filesize($webpPath);
+
+                echo "    Scale {$scale}: {$shrinkW}x{$shrinkH} -> " . round($newSize / 1024) . "KB\n";
+                if ($newSize <= $targetBytes) break;
+            }
+        }
+
         imagedestroy($srcImage);
 
+        clearstatcache(true, $webpPath);
         $newSize = filesize($webpPath);
         // Use WebP if it's smaller than original
         if ($newSize < $fileSize) {
