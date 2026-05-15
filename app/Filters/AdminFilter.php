@@ -26,11 +26,6 @@ class AdminFilter implements FilterInterface
         }
 
         if (!$user) {
-            $uri = (string) $request->getUri();
-            $hasSession = $session->get('logged_in');
-            $userId = $session->get('user_id');
-            $hasCookie = isset($_COOKIE['remember_user']);
-            log_message('error', "AdminFilter BLOCKED: uri={$uri} session_logged_in={$hasSession} session_user_id={$userId} remember_cookie={$hasCookie} session_id=" . session_id());
             return redirect()->to('/login')->with('error', 'Please login first.');
         }
 
