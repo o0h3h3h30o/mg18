@@ -514,16 +514,38 @@ class PageController extends BaseController
             }
         }
 
+        clearstatcache(true, $webpPath);
+        $webpSize = filesize($webpPath);
+
+        // Pick the smallest: WebP or re-encoded JPEG
+        $info = @getimagesizefromstring($imageData);
+        $mime = $info['mime'] ?? '';
+        $jpegTmpPath = null;
+        $jpegSize = PHP_INT_MAX;
+        if (in_array($mime, ['image/jpeg', 'image/png'])) {
+            $jpegTmpPath = rtrim($dir, '/') . '/' . pathinfo($filename, PATHINFO_FILENAME) . '_opt.jpg';
+            imagejpeg($src, $jpegTmpPath, 72);
+            clearstatcache(true, $jpegTmpPath);
+            $jpegSize = filesize($jpegTmpPath);
+        }
+
         imagedestroy($src);
 
-        clearstatcache(true, $webpPath);
-        $newSize = filesize($webpPath);
-        if ($newSize < $size) {
+        if ($webpSize <= $jpegSize && $webpSize < $size) {
             @unlink($filePath);
+            if ($jpegTmpPath) @unlink($jpegTmpPath);
             return $webpName;
+        }
+        if ($jpegTmpPath && $jpegSize < $size) {
+            @unlink($filePath);
+            @unlink($webpPath);
+            $finalJpeg = rtrim($dir, '/') . '/' . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+            @rename($jpegTmpPath, $finalJpeg);
+            return pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
         }
 
         @unlink($webpPath);
+        if ($jpegTmpPath) @unlink($jpegTmpPath);
         return $filename;
     }
 

@@ -1836,20 +1836,42 @@ class Crawl extends \CodeIgniter\Controller
             }
         }
 
-        imagedestroy($srcImage);
-
         clearstatcache(true, $webpPath);
-        $newSize = filesize($webpPath);
-        // Use WebP if it's smaller than original
-        if ($newSize < $fileSize) {
-            @unlink($filePath);
-            @chmod($webpPath, 0644);
-            echo "    Saved: " . round($sizeKB) . "KB -> " . round($newSize / 1024) . "KB\n";
-            return $webpName;
+        $webpSize = filesize($webpPath);
+
+        // Pick the smallest: WebP or re-encoded JPEG
+        $jpegPath = null;
+        $jpegSize = PHP_INT_MAX;
+        if (in_array($mime, ['image/jpeg', 'image/png'])) {
+            $jpegPath = $savePath . pathinfo($filename, PATHINFO_FILENAME) . '_opt.jpg';
+            imagejpeg($srcImage, $jpegPath, 72);
+            clearstatcache(true, $jpegPath);
+            $jpegSize = filesize($jpegPath);
         }
 
-        // Original already smaller (rare)
+        imagedestroy($srcImage);
+
+        // Choose the smallest output that's still smaller than the original
+        if ($webpSize <= $jpegSize && $webpSize < $fileSize) {
+            @unlink($filePath);
+            if ($jpegPath) @unlink($jpegPath);
+            @chmod($webpPath, 0644);
+            echo "    Saved: " . round($sizeKB) . "KB -> " . round($webpSize / 1024) . "KB (webp)\n";
+            return $webpName;
+        }
+        if ($jpegPath && $jpegSize < $fileSize) {
+            @unlink($filePath);
+            @unlink($webpPath);
+            $finalJpeg = $savePath . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+            @rename($jpegPath, $finalJpeg);
+            @chmod($finalJpeg, 0644);
+            echo "    Saved: " . round($sizeKB) . "KB -> " . round($jpegSize / 1024) . "KB (jpeg q72)\n";
+            return pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+        }
+
+        // Neither is smaller — keep original
         @unlink($webpPath);
+        if ($jpegPath) @unlink($jpegPath);
         return $filename;
     }
 
