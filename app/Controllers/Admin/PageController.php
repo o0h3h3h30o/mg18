@@ -442,65 +442,87 @@ class PageController extends BaseController
      */
     private function saveAndOptimize(string $imageData, string $dir, string $filename): string
     {
+        $maxWidth    = 720;
+        $targetBytes = 1024 * 1024; // 1MB
         $size = strlen($imageData);
+        $filePath = rtrim($dir, '/') . '/' . $filename;
 
         // Under 300KB: save as-is
         if ($size < 300 * 1024) {
-            file_put_contents($dir . '/' . $filename, $imageData);
+            file_put_contents($filePath, $imageData);
             return $filename;
         }
 
         // Save original first
-        file_put_contents($dir . '/' . $filename, $imageData);
+        file_put_contents($filePath, $imageData);
 
-        // Check if image is too large for GD (estimate: width * height * 4 bytes per pixel)
         $info = @getimagesizefromstring($imageData);
-        if (!$info) {
-            return $filename;
-        }
+        if (!$info) return $filename;
 
-        $w = $info[0];
-        $h = $info[1];
-        $estimatedMemory = $w * $h * 4 * 2; // x2 for src + dst
+        $origW = $info[0];
+        $origH = $info[1];
+        $estimatedMemory = $origW * $origH * 4 * 2;
         $memoryLimit = (int) ini_get('memory_limit') * 1024 * 1024;
         $memoryAvailable = $memoryLimit - memory_get_usage(true);
+        if ($estimatedMemory > $memoryAvailable * 0.8) return $filename;
 
-        if ($estimatedMemory > $memoryAvailable * 0.8) {
-            // Too large for GD, keep original
-            return $filename;
-        }
-
-        // Try to optimize with GD
         $src = @imagecreatefromstring($imageData);
-        if (!$src) {
-            return $filename;
-        }
+        if (!$src) return $filename;
 
-        // Resize if width > 1200
-        if ($w > 1200) {
-            $newW = 1200;
-            $newH = (int) round($h * (1200 / $w));
+        // Step 1: Resize if width > 720px
+        $curW = $origW;
+        $curH = $origH;
+        if ($curW > $maxWidth) {
+            $newW = $maxWidth;
+            $newH = (int) round($curH * ($maxWidth / $curW));
             $dst = imagecreatetruecolor($newW, $newH);
-            imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $curW, $curH);
             imagedestroy($src);
             $src = $dst;
+            $curW = $newW;
+            $curH = $newH;
         }
 
-        // Save as WebP with progressive quality
+        // Step 2: Save as WebP, try decreasing quality until under target
         $webpName = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
-        $webpPath = $dir . '/' . $webpName;
+        $webpPath = rtrim($dir, '/') . '/' . $webpName;
 
         foreach ([85, 75, 65, 50] as $quality) {
             imagewebp($src, $webpPath, $quality);
-            if (filesize($webpPath) < 1024 * 1024) {
-                imagedestroy($src);
-                @unlink($dir . '/' . $filename); // Remove original
-                return $webpName;
+            clearstatcache(true, $webpPath);
+            if (filesize($webpPath) <= $targetBytes) break;
+        }
+
+        // Step 3: Still over 1MB after q50 — progressively shrink resolution
+        clearstatcache(true, $webpPath);
+        if (filesize($webpPath) > $targetBytes) {
+            foreach ([0.75, 0.5, 0.35] as $scale) {
+                $shrinkW = (int) round($curW * $scale);
+                $shrinkH = (int) round($curH * $scale);
+                if ($shrinkW < 360) break;
+
+                $shrunk = imagecreatetruecolor($shrinkW, $shrinkH);
+                imagealphablending($shrunk, false);
+                imagesavealpha($shrunk, true);
+                imagecopyresampled($shrunk, $src, 0, 0, 0, 0, $shrinkW, $shrinkH, $curW, $curH);
+                imagewebp($shrunk, $webpPath, 50);
+                imagedestroy($shrunk);
+                clearstatcache(true, $webpPath);
+                if (filesize($webpPath) <= $targetBytes) break;
             }
         }
 
         imagedestroy($src);
-        // WebP still too large, keep original
+
+        clearstatcache(true, $webpPath);
+        $newSize = filesize($webpPath);
+        if ($newSize < $size) {
+            @unlink($filePath);
+            return $webpName;
+        }
+
         @unlink($webpPath);
         return $filename;
     }
