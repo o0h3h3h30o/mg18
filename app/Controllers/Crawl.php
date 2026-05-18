@@ -428,10 +428,11 @@ class Crawl extends \CodeIgniter\Controller
             'artist' => '', 'summary' => '', 'image' => '', 'categories' => [],
         ];
 
-        $titleEl = $dom->find('.post-title h1', 0);
-        if ($titleEl) $data['name'] = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($titleEl->innertext))));
+        $clean = fn($s) => trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($s, ENT_QUOTES, 'UTF-8'))));
 
-        // Parse by label instead of index
+        $titleEl = $dom->find('.post-title h1', 0);
+        if ($titleEl) $data['name'] = $clean($titleEl->innertext);
+
         $items = $dom->find('.post-content_item');
         foreach ($items as $item) {
             $heading = $item->find('.summary-heading h5', 0);
@@ -439,26 +440,38 @@ class Crawl extends \CodeIgniter\Controller
             $label = strtolower(trim($heading->text()));
             $content = $item->find('.summary-content', 0);
             if (!$content) continue;
-            $val = trim(preg_replace('/\s+/', ' ', $content->text()));
 
             if (str_contains($label, 'alternative')) {
-                $data['otherNames'] = $val;
+                $data['otherNames'] = $clean($content->innertext);
             }
         }
 
         $author = $dom->find('.author-content', 0);
-        if ($author) $data['author'] = trim(preg_replace('/\s+/', ' ', $author->text()));
+        if ($author) $data['author'] = $clean($author->innertext);
 
         $artist = $dom->find('.artist-content', 0);
-        if ($artist) $data['artist'] = trim(preg_replace('/\s+/', ' ', $artist->text()));
+        if ($artist) $data['artist'] = $clean($artist->innertext);
 
         $genres = $dom->find('.genres-content', 0);
         if ($genres) {
-            $data['categories'] = array_filter(array_map('trim', explode(',', $genres->text())));
+            foreach ($genres->find('a') as $a) {
+                $name = trim($a->text());
+                if ($name) $data['categories'][] = $name;
+            }
         }
 
+        $tags = $dom->find('.tags-content', 0);
+        if ($tags) {
+            foreach ($tags->find('a') as $a) {
+                $name = trim($a->text());
+                if ($name) $data['categories'][] = $name;
+            }
+        }
+
+        $data['categories'] = array_values(array_unique($data['categories']));
+
         $summary = $dom->find('.summary__content', 0);
-        if ($summary) $data['summary'] = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($summary->innerHtml()))));
+        if ($summary) $data['summary'] = $clean($summary->innertext);
 
         $img = $dom->find('.summary_image img', 0);
         if ($img) {
@@ -1770,6 +1783,25 @@ class Crawl extends \CodeIgniter\Controller
 
         $srcImage = null;
 
+        if ($mime === 'image/avif') {
+            $converted = $this->convertAvifToJpeg($filePath);
+            if ($converted !== $filePath) {
+                $newFilename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+                $newPath = $savePath . $newFilename;
+                rename($converted, $newPath);
+                $filePath = $newPath;
+                $filename = $newFilename;
+                $mime = 'image/jpeg';
+                $info = @getimagesize($filePath);
+                if (!$info) return $filename;
+                $origW = $info[0];
+                $origH = $info[1];
+            } else {
+                echo "    Image {$filename}: AVIF not supported, skipping\n";
+                return $filename;
+            }
+        }
+
         switch ($mime) {
             case 'image/jpeg': $srcImage = @imagecreatefromjpeg($filePath); break;
             case 'image/png':  $srcImage = @imagecreatefrompng($filePath); break;
@@ -1927,6 +1959,8 @@ class Crawl extends \CodeIgniter\Controller
         $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
         file_put_contents($tmpFile, $imageData);
 
+        $tmpFile = $this->convertAvifToJpeg($tmpFile);
+
         try {
             $imgService = \Config\Services::image();
             $imgService->withFile($tmpFile)->resize(250, 350, true, 'height')->save($coverDir . 'cover_250x350.jpg', 90);
@@ -1942,6 +1976,57 @@ class Crawl extends \CodeIgniter\Controller
         foreach (glob($coverDir . '*') as $f) {
             @chmod($f, 0644);
         }
+    }
+
+    private function convertAvifToJpeg(string $filePath): string
+    {
+        $mime = @mime_content_type($filePath);
+        if ($mime !== 'image/avif') return $filePath;
+
+        $jpegPath = $filePath . '.jpg';
+
+        if (function_exists('imagecreatefromavif')) {
+            $img = @imagecreatefromavif($filePath);
+            if ($img) {
+                imagejpeg($img, $jpegPath, 90);
+                imagedestroy($img);
+                @unlink($filePath);
+                return $jpegPath;
+            }
+        }
+
+        if (class_exists('Imagick')) {
+            try {
+                $im = new \Imagick($filePath . '[0]');
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(90);
+                $im->writeImage($jpegPath);
+                $im->destroy();
+                @unlink($filePath);
+                return $jpegPath;
+            } catch (\Exception $e) {}
+        }
+
+        $magick = trim(shell_exec('which magick 2>/dev/null') ?: shell_exec('which convert 2>/dev/null') ?: '');
+        if ($magick) {
+            exec(escapeshellarg($magick) . ' ' . escapeshellarg($filePath) . '[0] -quality 90 ' . escapeshellarg($jpegPath) . ' 2>&1', $out, $ret);
+            if ($ret === 0 && file_exists($jpegPath)) {
+                @unlink($filePath);
+                return $jpegPath;
+            }
+        }
+
+        $ffmpeg = trim(shell_exec('which ffmpeg 2>/dev/null') ?: '');
+        if ($ffmpeg) {
+            exec(escapeshellarg($ffmpeg) . ' -i ' . escapeshellarg($filePath) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($jpegPath) . ' -y 2>&1', $out, $ret);
+            if ($ret === 0 && file_exists($jpegPath)) {
+                @unlink($filePath);
+                return $jpegPath;
+            }
+        }
+
+        echo "  AVIF convert failed: no supported method (GD/Imagick/magick/ffmpeg)\n";
+        return $filePath;
     }
 
 
@@ -1974,7 +2059,7 @@ class Crawl extends \CodeIgniter\Controller
     private function getImageExtension(string $url): string
     {
         $ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
-        if (!$ext || !in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+        if (!$ext || !in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])) {
             return 'jpg';
         }
         return $ext;
