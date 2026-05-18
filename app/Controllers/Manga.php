@@ -829,6 +829,7 @@ class Manga extends BaseController
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
         file_put_contents($tmpFile, $imgData);
+        $tmpFile = convert_avif_to_jpeg($tmpFile);
 
         try {
             $imgService = \Config\Services::image();

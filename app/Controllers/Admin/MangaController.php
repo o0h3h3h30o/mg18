@@ -252,13 +252,15 @@ class MangaController extends BaseController
             file_put_contents($tmpFile, $imgData);
             $finfo = new \finfo(FILEINFO_MIME_TYPE);
             $mime = $finfo->file($tmpFile);
-            if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'])) {
+            if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/avif'])) {
                 @unlink($tmpFile);
                 return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid image type from URL (got: ' . $mime . ')']);
             }
         } else {
             return $this->response->setJSON(['status' => 0, 'msg' => 'No file or URL provided']);
         }
+
+        $tmpFile = convert_avif_to_jpeg($tmpFile);
 
         // Save cover_250x350.jpg
         $imgService = \Config\Services::image();
@@ -577,6 +579,7 @@ class MangaController extends BaseController
         }
 
         if ($tmpFile) {
+            $tmpFile = convert_avif_to_jpeg($tmpFile);
             $savePath = config('Manga')->savePath . $slug . '/cover/';
             if (!is_dir($savePath)) {
                 mkdir($savePath, 0755, true);
