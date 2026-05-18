@@ -1959,13 +1959,18 @@ class Crawl extends \CodeIgniter\Controller
         $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
         file_put_contents($tmpFile, $imageData);
 
+        $origTmp = $tmpFile;
         $tmpFile = convert_avif_to_jpeg($tmpFile);
+        $mime = @mime_content_type($tmpFile);
+        echo "  Cover: {$imageUrl}\n";
+        echo "  Mime after convert: {$mime} (changed: " . ($tmpFile !== $origTmp ? 'yes' : 'no') . ")\n";
 
         try {
             $imgService = \Config\Services::image();
             $imgService->withFile($tmpFile)->resize(250, 350, true, 'height')->save($coverDir . 'cover_250x350.jpg', 90);
             $imgService->withFile($coverDir . 'cover_250x350.jpg')->resize(150, 210, true, 'height')->save($coverDir . 'cover_thumb.jpg', 85);
             $imgService->withFile($coverDir . 'cover_250x350.jpg')->resize(100, 140, true, 'height')->save($coverDir . 'cover_thumb_2.webp', 85);
+            echo "  Cover saved OK\n";
         } catch (\Exception $e) {
             echo "  Cover resize error: {$e->getMessage()}\n";
         }

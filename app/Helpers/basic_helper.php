@@ -116,7 +116,9 @@ if (!function_exists('convert_avif_to_jpeg')) {
 
         $magick = trim(shell_exec('which magick 2>/dev/null') ?: shell_exec('which convert 2>/dev/null') ?: '');
         if ($magick) {
-            exec(escapeshellarg($magick) . ' ' . escapeshellarg($filePath) . '[0] -quality 90 ' . escapeshellarg($jpegPath) . ' 2>&1', $out, $ret);
+            $cmd = escapeshellarg($magick) . ' ' . escapeshellarg($filePath) . '[0] -quality 90 ' . escapeshellarg($jpegPath) . ' 2>&1';
+            exec($cmd, $out, $ret);
+            log_message('debug', "AVIF convert magick: cmd={$cmd} ret={$ret} out=" . implode(' ', $out));
             if ($ret === 0 && file_exists($jpegPath)) {
                 @unlink($filePath);
                 return $jpegPath;
@@ -125,13 +127,16 @@ if (!function_exists('convert_avif_to_jpeg')) {
 
         $ffmpeg = trim(shell_exec('which ffmpeg 2>/dev/null') ?: '');
         if ($ffmpeg) {
-            exec(escapeshellarg($ffmpeg) . ' -i ' . escapeshellarg($filePath) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($jpegPath) . ' -y 2>&1', $out, $ret);
+            $cmd = escapeshellarg($ffmpeg) . ' -i ' . escapeshellarg($filePath) . ' -frames:v 1 -q:v 2 ' . escapeshellarg($jpegPath) . ' -y 2>&1';
+            exec($cmd, $out, $ret);
+            log_message('debug', "AVIF convert ffmpeg: cmd={$cmd} ret={$ret} out=" . implode(' ', $out));
             if ($ret === 0 && file_exists($jpegPath)) {
                 @unlink($filePath);
                 return $jpegPath;
             }
         }
 
+        log_message('error', "AVIF convert failed for {$filePath}: no method worked (GD=" . (function_exists('imagecreatefromavif') ? 'yes' : 'no') . " Imagick=" . (class_exists('Imagick') ? 'yes' : 'no') . " magick={$magick} ffmpeg={$ffmpeg})");
         return $filePath;
     }
 }
