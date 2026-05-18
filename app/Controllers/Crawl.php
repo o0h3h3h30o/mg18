@@ -22,6 +22,7 @@ class Crawl extends \CodeIgniter\Controller
     {
         $this->db = \Config\Database::connect();
         $this->savePath = config('Manga')->savePath;
+        helper('basic');
     }
 
     // =========================================================================
