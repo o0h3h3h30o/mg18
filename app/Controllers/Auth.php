@@ -146,7 +146,10 @@ class Auth extends BaseController
     public function subcribe()
     {
         if (!$this->validate([
-            'username' => 'required|min_length[3]|max_length[50]|alpha_numeric_punct',
+            'username' => [
+                'rules'  => 'required|min_length[3]|max_length[30]|regex_match[/^[a-zA-Z0-9_.]+$/]',
+                'errors' => ['regex_match' => 'Username can only contain letters, numbers, underscores and dots.'],
+            ],
             'email'    => 'required|valid_email|max_length[255]',
             'password' => 'required|min_length[6]|max_length[255]',
         ])) {
