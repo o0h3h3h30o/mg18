@@ -25,18 +25,6 @@ trait BannerMerger
     {
         if (!$top && !$bottom) return false;
 
-        // Check image size — skip if too large to avoid memory exhaustion
-        $srcInfo = @getimagesize($srcPath);
-        if ($srcInfo) {
-            $estimatedMem = $srcInfo[0] * $srcInfo[1] * 4 * 3; // src + banner + final
-            $memLimit = (int) ini_get('memory_limit') * 1024 * 1024;
-            $memAvail = $memLimit - memory_get_usage(true);
-            if ($estimatedMem > $memAvail * 0.7) {
-                log_message('warning', "BannerMerger: skip {$srcPath} — too large ({$srcInfo[0]}x{$srcInfo[1]}, need ~" . round($estimatedMem/1024/1024) . "MB)");
-                return false;
-            }
-        }
-
         $candidates = [
             FCPATH . '1.jpg',
             FCPATH . 'img/banner.png',
