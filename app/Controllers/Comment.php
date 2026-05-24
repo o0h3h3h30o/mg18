@@ -182,13 +182,13 @@ class Comment extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Comment is empty or too long (max 2000 chars).']);
         }
 
-        // Rate limit: max 2 comments per minute
+        // Rate limit: 1 comment per 3 minutes
         $recentCount = $this->db->table('comments')
             ->where('user_id', $this->user_info->id)
-            ->where('created_at >', date('Y-m-d H:i:s', strtotime('-1 minute')))
+            ->where('created_at >', date('Y-m-d H:i:s', strtotime('-3 minutes')))
             ->countAllResults();
         if ($recentCount >= 1) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Too many comments. Please wait a moment.']);
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Please wait 3 minutes between comments.']);
         }
 
         // If reply, verify parent exists and inherit its post_id/post_type
