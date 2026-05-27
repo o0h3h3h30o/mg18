@@ -114,6 +114,8 @@ class Crawl extends \CodeIgniter\Controller
                 $this->crawlChapterFromMangaDistrict($item, $manga);
             } elseif (str_contains($item->source_url, 'manhwaread')) {
                 $this->crawlChapterFromManhwaRead($item, $manga);
+            } elseif (str_contains($item->source_url, 'submanhwa')) {
+                $this->crawlChapterFromSubManhwa($item, $manga);
             } else {
                 echo "Unknown source: {$item->source_url}\n";
             }
@@ -201,6 +203,8 @@ class Crawl extends \CodeIgniter\Controller
                     $referer = 'https://manhwaread.com/';
                 } elseif (str_contains($imageUrl, 'mangadistrict') || str_contains((string)($item->source_url ?? ''), 'mangadistrict')) {
                     $referer = 'https://mangadistrict.com/';
+                } elseif (str_contains($imageUrl, 'submanhwa') || str_contains((string)($item->source_url ?? ''), 'submanhwa')) {
+                    $referer = 'https://submanhwa.com/';
                 }
 
                 $rawdata = $this->fetchImageData($imageUrl, $referer);
@@ -994,6 +998,89 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         // Apply banner to first/last actual saved page
+        $this->applyBannerToFiles($savedPaths);
+
+        $this->db->table('chapter')->where('id', $chapter->id)->update([
+            'is_crawling' => 0,
+            'is_show'     => 1,
+        ]);
+        $this->updateMangaLatestChapters($chapter->manga_id);
+
+        echo "  Completed: {$successCount} pages downloaded.\n";
+    }
+
+    /**
+     * Crawl a single chapter from submanhwa.com
+     * Images live in `#all` and may use src or data-src (lazy-load).
+     */
+    private function crawlChapterFromSubManhwa(object $chapter, object $manga): void
+    {
+        $html = $this->fetchUrl($chapter->source_url, 'https://submanhwa.com');
+        if (!$html) {
+            echo "  Failed to fetch submanhwa page.\n";
+            return;
+        }
+
+        $dom = HtmlDomParser::str_get_html($html);
+        $container = $dom->find('#all', 0);
+        if (!$container) {
+            echo "  No #all container found.\n";
+            return;
+        }
+
+        $imgDoms = $container->find('img');
+        if (empty($imgDoms)) {
+            echo "  No images found in #all.\n";
+            return;
+        }
+
+        $this->db->table('chapter')->where('id', $chapter->id)->update(['is_crawling' => 1]);
+
+        $chapterDir = $this->savePath . $manga->slug . '/chapters/' . $chapter->slug . '/';
+        @mkdir($chapterDir, 0755, true);
+
+        $index = 1;
+        $successCount = 0;
+        $savedPaths = [];
+
+        foreach ($imgDoms as $imgDom) {
+            // Prefer data-src (real URL when lazy-loaded), fall back to src.
+            $dataSrc = trim($imgDom->getAttribute('data-src') ?: '');
+            $src     = trim($imgDom->getAttribute('src') ?: '');
+            $url     = $dataSrc ?: $src;
+
+            // Skip base64 placeholder gifs used by lazy-load.
+            if (!$url || str_starts_with($url, 'data:')) continue;
+
+            $ext = $this->getImageExtension($url);
+            $pageName = str_pad($index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
+
+            echo "  Downloading page {$index}: " . substr($url, 0, 80) . "...\n";
+
+            $imageData = $this->fetchImageData($url, 'https://submanhwa.com/');
+            if (!$imageData) {
+                echo "  FAILED: page {$index}\n";
+                $index++;
+                continue;
+            }
+
+            $finalName = $this->saveAndOptimizeImage($imageData, $chapterDir, $pageName);
+
+            $this->db->table('page')->insert([
+                'slug'       => $index,
+                'image'      => $finalName,
+                'external'   => 0,
+                'chapter_id' => $chapter->id,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $savedPaths[] = $chapterDir . $finalName;
+            $successCount++;
+            echo "  OK: {$manga->name} - Chapter {$chapter->number} - Page: {$finalName}\n";
+            $index++;
+        }
+
         $this->applyBannerToFiles($savedPaths);
 
         $this->db->table('chapter')->where('id', $chapter->id)->update([
