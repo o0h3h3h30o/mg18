@@ -216,10 +216,21 @@ class Manga extends BaseController
         $mangaId = (int)($data['mangaId'] ?? 0);
         $chapterNumber = $data['chapterNumber'] ?? null;
         $pages = $data['pages'] ?? [];
+        $sourceUrl = trim($data['sourceUrl'] ?? $data['source_url'] ?? '');
 
-        if (!$mangaId || !$chapterNumber) {
+        if (!$mangaId || $chapterNumber === null || $chapterNumber === '') {
             return $this->response->setBody('0');
         }
+
+        // Normalize chapter number: accept int or float (e.g. 1, "1", 1.5, "1.5").
+        // Reject anything that isn't a valid non-negative number.
+        if (!is_numeric($chapterNumber)) {
+            return $this->response->setBody('0');
+        }
+        $chapterNumber = (float)$chapterNumber == (int)$chapterNumber
+            ? (string)(int)$chapterNumber
+            : rtrim(rtrim(number_format((float)$chapterNumber, 4, '.', ''), '0'), '.');
+        $chapterSlug = 'chapter-' . str_replace('.', '-', $chapterNumber);
 
         // Verify manga exists
         $manga = $this->db->table('manga')->where('id', $mangaId)->get()->getRow();
@@ -227,21 +238,26 @@ class Manga extends BaseController
             return $this->response->setBody('0');
         }
 
+        // With sourceUrl: queue for crawlChapter (is_crawling=0). Without: keep legacy
+        // external-pages flow (is_crawling=2) handled by crawlChapter2.
+        $isCrawling = $sourceUrl !== '' ? 0 : 2;
+
         $this->db->table('chapter')->insert([
-            'manga_id'   => $mangaId,
-            'is_show'    => 0,
-            'is_crawling' => 2,
-            'slug'       => 'chapter-' . $chapterNumber,
-            'number'     => $chapterNumber,
-            'name'       => 'Chapter ' . $chapterNumber,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-            'user_id'    => 1,
-            'volume'     => 0,
+            'manga_id'    => $mangaId,
+            'is_show'     => 0,
+            'is_crawling' => $isCrawling,
+            'slug'        => $chapterSlug,
+            'number'      => $chapterNumber,
+            'name'        => 'Chapter ' . $chapterNumber,
+            'source_url'  => $sourceUrl,
+            'created_at'  => date('Y-m-d H:i:s'),
+            'updated_at'  => date('Y-m-d H:i:s'),
+            'user_id'     => 1,
+            'volume'      => 0,
         ]);
         $last_id = $this->db->insertID();
 
-        if (!empty($pages)) {
+        if ($sourceUrl === '' && !empty($pages)) {
             $now = date('Y-m-d H:i:s');
             $pageData = [];
             foreach ($pages as $k => $page) {
