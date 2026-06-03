@@ -209,7 +209,7 @@ class Manga extends BaseController
         $data = json_decode($json, true);
 
         if (empty($data)) {
-            return $this->response->setBody('0');
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Invalid or empty JSON body']);
         }
 
         // Validate required fields
@@ -219,13 +219,12 @@ class Manga extends BaseController
         $sourceUrl = trim($data['sourceUrl'] ?? $data['source_url'] ?? '');
 
         if (!$mangaId || $chapterNumber === null || $chapterNumber === '') {
-            return $this->response->setBody('0');
+            return $this->response->setJSON(['status' => 0, 'msg' => 'Missing mangaId or chapterNumber']);
         }
 
         // Normalize chapter number: accept int or float (e.g. 1, "1", 1.5, "1.5").
-        // Reject anything that isn't a valid non-negative number.
         if (!is_numeric($chapterNumber)) {
-            return $this->response->setBody('0');
+            return $this->response->setJSON(['status' => 0, 'msg' => 'chapterNumber must be numeric']);
         }
         $chapterNumber = (float)$chapterNumber == (int)$chapterNumber
             ? (string)(int)$chapterNumber
@@ -235,14 +234,32 @@ class Manga extends BaseController
         // Verify manga exists
         $manga = $this->db->table('manga')->where('id', $mangaId)->get()->getRow();
         if (!$manga) {
-            return $this->response->setBody('0');
+            return $this->response->setJSON(['status' => 0, 'msg' => "Manga {$mangaId} not found"]);
         }
 
-        // With sourceUrl: queue for crawlChapter (is_crawling=0). Without: keep legacy
-        // external-pages flow (is_crawling=2) handled by crawlChapter2.
-        $isCrawling = $sourceUrl !== '' ? 0 : 2;
+        // Skip if chapter (manga_id, slug) already exists
+        $existing = $this->db->table('chapter')
+            ->where('manga_id', $mangaId)
+            ->where('slug', $chapterSlug)
+            ->get()->getRow();
+        if ($existing) {
+            return $this->response->setJSON([
+                'status' => 0,
+                'msg'    => "Chapter {$chapterSlug} already exists",
+                'chapter_id' => $existing->id,
+            ]);
+        }
 
-        $this->db->table('chapter')->insert([
+        // is_crawling decided by what the client sent:
+        //   - pages provided → legacy external-pages flow (is_crawling=2),
+        //     downloaded by crawlChapter2. source_url (if also sent) is stored
+        //     so the downloader can derive the right Referer header.
+        //   - only sourceUrl  → scrape flow (is_crawling=0), handled by
+        //     crawlChapter which parses source_url to build the page list.
+        $hasPages = !empty($pages);
+        $isCrawling = $hasPages ? 2 : 0;
+
+        $ok = $this->db->table('chapter')->insert([
             'manga_id'    => $mangaId,
             'is_show'     => 0,
             'is_crawling' => $isCrawling,
@@ -255,9 +272,13 @@ class Manga extends BaseController
             'user_id'     => 1,
             'volume'      => 0,
         ]);
+        if (!$ok) {
+            $err = $this->db->error();
+            return $this->response->setJSON(['status' => 0, 'msg' => 'DB insert failed', 'db' => $err]);
+        }
         $last_id = $this->db->insertID();
 
-        if ($sourceUrl === '' && !empty($pages)) {
+        if ($hasPages) {
             $now = date('Y-m-d H:i:s');
             $pageData = [];
             foreach ($pages as $k => $page) {
@@ -273,7 +294,11 @@ class Manga extends BaseController
             $this->db->table('page')->insertBatch($pageData);
         }
 
-        return $this->response->setBody('1');
+        return $this->response->setJSON([
+            'status'     => 1,
+            'chapter_id' => $last_id,
+            'slug'       => $chapterSlug,
+        ]);
     }
 
     /**

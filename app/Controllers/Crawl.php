@@ -195,17 +195,7 @@ class Crawl extends \CodeIgniter\Controller
                 $ext = $this->getImageExtension($imageUrl);
                 $pageName = str_pad($page->slug, 3, '0', STR_PAD_LEFT) . '.' . $ext;
 
-                // Determine referer based on image URL or chapter source_url
-                $referer = 'https://manga18fx.com/';
-                if (str_contains($imageUrl, 'newtoki') || str_contains($imageUrl, 'manatoki')) {
-                    $referer = 'https://newtoki468.com/';
-                } elseif (str_contains($imageUrl, 'manread.xyz') || str_contains((string)($item->source_url ?? ''), 'manhwaread')) {
-                    $referer = 'https://manhwaread.com/';
-                } elseif (str_contains($imageUrl, 'mangadistrict') || str_contains((string)($item->source_url ?? ''), 'mangadistrict')) {
-                    $referer = 'https://mangadistrict.com/';
-                } elseif (str_contains($imageUrl, 'submanhwa') || str_contains((string)($item->source_url ?? ''), 'submanhwa')) {
-                    $referer = 'https://submanhwa.com/';
-                }
+                $referer = $this->resolveImageReferer($imageUrl, $item->source_url ?? '');
 
                 $rawdata = $this->fetchImageData($imageUrl, $referer);
                 if ($rawdata) {
@@ -1993,6 +1983,42 @@ class Crawl extends \CodeIgniter\Controller
         @unlink($webpPath);
         if ($jpegPath) @unlink($jpegPath);
         return $filename;
+    }
+
+    /**
+     * Pick the best referer for downloading an external chapter image.
+     *
+     * Priority:
+     *   1. Use scheme+host from the chapter's source_url (most reliable —
+     *      it's the page that actually embeds the image).
+     *   2. Fall back to per-host heuristics based on the image URL itself
+     *      (covers legacy pages without source_url).
+     *   3. Default to manga18fx.
+     */
+    private function resolveImageReferer(string $imageUrl, string $sourceUrl = ''): string
+    {
+        if ($sourceUrl !== '') {
+            $parts = parse_url($sourceUrl);
+            if (!empty($parts['host'])) {
+                $scheme = $parts['scheme'] ?? 'https';
+                return $scheme . '://' . $parts['host'] . '/';
+            }
+        }
+
+        $map = [
+            'newtoki'       => 'https://newtoki468.com/',
+            'manatoki'      => 'https://newtoki468.com/',
+            'manread.xyz'   => 'https://manhwaread.com/',
+            'manhwaread'    => 'https://manhwaread.com/',
+            'mangadistrict' => 'https://mangadistrict.com/',
+            'submanhwa'     => 'https://submanhwa.com/',
+        ];
+        foreach ($map as $needle => $ref) {
+            if (str_contains($imageUrl, $needle)) {
+                return $ref;
+            }
+        }
+        return 'https://manga18fx.com/';
     }
 
     private function fetchImageData(string $url, string $referer = ''): string
