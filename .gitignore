@@ -131,3 +131,6 @@ _modules/*
 #-------------------------
 /public/manga/
 /public/uploads/
+
+# Claude worktrees (local only)
+.claude/worktrees/
