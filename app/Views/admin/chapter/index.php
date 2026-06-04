@@ -83,14 +83,7 @@
                         <td>
                             <a href="/admin/pages/<?= $ch->id ?>" class="btn btn-outline-info btn-sm" title="Manage Images">Pages</a>
                             <a href="/admin/chapters/edit/<?= $ch->id ?>" class="btn btn-outline-primary btn-sm">Edit</a>
-                            <form action="/admin/chapters/publish/<?= $ch->id ?>" method="post" class="d-inline">
-                                <?= csrf_field() ?>
-                                <?php if ((int)$ch->is_show === 1): ?>
-                                    <button class="btn btn-outline-warning btn-sm" title="Unpublish (hide)">Unpublish</button>
-                                <?php else: ?>
-                                    <button class="btn btn-outline-success btn-sm" title="Publish (show)">Publish</button>
-                                <?php endif; ?>
-                            </form>
+                            <a href="/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish">Publish</a>
                             <form action="/admin/chapters/delete/<?= $ch->id ?>" method="post" class="d-inline" onsubmit="return confirm('Delete?')">
                                 <?= csrf_field() ?>
                                 <button class="btn btn-outline-danger btn-sm">Del</button>

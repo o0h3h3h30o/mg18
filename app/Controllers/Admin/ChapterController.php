@@ -215,28 +215,6 @@ class ChapterController extends BaseController
         return redirect()->to('/admin/chapters/edit/' . $id)->with('success', 'Chapter queued for re-crawl. Pages deleted, is_show=0, is_crawling=0. Crawler will pick it up.');
     }
 
-    /**
-     * Toggle is_show: publish (0→1) or unpublish (1→0).
-     * Also clears is_crawling so a stuck "Crawling" badge gets reset on publish.
-     */
-    public function publish($id)
-    {
-        $item = $this->model->find($id);
-        if (!$item) return redirect()->back()->with('error', 'Chapter not found.');
-
-        $newShow = (int)$item->is_show === 1 ? 0 : 1;
-        $update = ['is_show' => $newShow];
-        if ($newShow === 1) {
-            $update['is_crawling'] = 0;
-        }
-        $this->db->table('chapter')->where('id', $id)->update($update);
-
-        $msg = $newShow === 1 ? 'Chapter published.' : 'Chapter unpublished.';
-        // Redirect back to whichever page triggered the action (dashboard or list).
-        $back = $this->request->getServer('HTTP_REFERER') ?: '/admin/chapters/' . $item->manga_id;
-        return redirect()->to($back)->with('success', $msg);
-    }
-
     public function delete($id)
     {
         $item = $this->model->find($id);
