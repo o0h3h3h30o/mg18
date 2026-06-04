@@ -237,27 +237,6 @@ class ChapterController extends BaseController
         return redirect()->to($back)->with('success', $msg);
     }
 
-    /**
-     * GET /admin/updatePublishChapter?chapter_id=<id>
-     * Lightweight toggle endpoint for new-tab buttons (dashboard).
-     * Returns plain text, no redirect — so the user can just close the tab.
-     */
-    public function updatePublishChapter()
-    {
-        $id = (int)$this->request->getGet('chapter_id');
-        if (!$id) return $this->response->setBody('Missing chapter_id');
-
-        $item = $this->model->find($id);
-        if (!$item) return $this->response->setBody('Chapter not found');
-
-        $this->db->table('chapter')->where('id', $id)->update([
-            'is_show'     => 1,
-            'is_crawling' => 0,
-        ]);
-
-        return $this->response->setBody("Chapter #{$id} PUBLISHED. You can close this tab.");
-    }
-
     public function delete($id)
     {
         $item = $this->model->find($id);

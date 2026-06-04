@@ -132,7 +132,6 @@ $routes->group('admin', ['namespace' => 'App\Controllers\Admin', 'filter' => 'ad
     $routes->post('chapters/update/(:num)', 'ChapterController::update/$1');
     $routes->post('chapters/delete/(:num)', 'ChapterController::delete/$1');
     $routes->post('chapters/publish/(:num)', 'ChapterController::publish/$1');
-    $routes->get('updatePublishChapter', 'ChapterController::updatePublishChapter');
     $routes->get('chapters/recrawl/(:num)', 'ChapterController::recrawl/$1');
     $routes->post('chapters/bulk-delete/(:num)', 'ChapterController::bulkDelete/$1');
     $routes->get('chapters/fetch-source/(:num)', 'ChapterController::fetchFromSource/$1');
