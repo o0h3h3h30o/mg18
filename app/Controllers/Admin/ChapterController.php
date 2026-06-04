@@ -250,15 +250,12 @@ class ChapterController extends BaseController
         $item = $this->model->find($id);
         if (!$item) return $this->response->setBody('Chapter not found');
 
-        $newShow = (int)$item->is_show === 1 ? 0 : 1;
-        $update = ['is_show' => $newShow];
-        if ($newShow === 1) {
-            $update['is_crawling'] = 0;
-        }
-        $this->db->table('chapter')->where('id', $id)->update($update);
+        $this->db->table('chapter')->where('id', $id)->update([
+            'is_show'     => 1,
+            'is_crawling' => 0,
+        ]);
 
-        $state = $newShow === 1 ? 'PUBLISHED' : 'UNPUBLISHED';
-        return $this->response->setBody("Chapter #{$id} {$state}. You can close this tab.");
+        return $this->response->setBody("Chapter #{$id} PUBLISHED. You can close this tab.");
     }
 
     public function delete($id)
