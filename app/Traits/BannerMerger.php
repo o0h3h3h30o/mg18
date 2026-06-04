@@ -115,8 +115,8 @@ trait BannerMerger
         $last  = end($orderedPaths);
         $isSame = ($first === $last);
 
-        $firstMime = mime_content_type($first);
-        $lastMime  = mime_content_type($last);
+        $firstMime = $this->detectMime($first);
+        $lastMime  = $this->detectMime($last);
 
         if ($isSame) {
             $this->mergeBanner($first, $first, $firstMime, true, true);
@@ -124,5 +124,28 @@ trait BannerMerger
             $this->mergeBanner($first, $first, $firstMime, true, false);
             $this->mergeBanner($last,  $last,  $lastMime,  false, true);
         }
+    }
+
+    /**
+     * Detect MIME type without requiring ext-fileinfo.
+     * Order: fileinfo (if installed) → getimagesize → extension fallback.
+     */
+    private function detectMime(string $path): string
+    {
+        if (function_exists('mime_content_type')) {
+            $m = @mime_content_type($path);
+            if ($m) return $m;
+        }
+        $info = @getimagesize($path);
+        if (!empty($info['mime'])) return $info['mime'];
+
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        return [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+            'gif'  => 'image/gif',
+        ][$ext] ?? 'application/octet-stream';
     }
 }

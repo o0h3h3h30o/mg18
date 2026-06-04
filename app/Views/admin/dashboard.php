@@ -102,6 +102,11 @@
                             <td>
                                 <a href="/admin/pages/<?= $ch->id ?>" class="btn btn-outline-primary btn-sm" title="View Pages"><i class="bi bi-images"></i></a>
                                 <a href="/admin/chapters/edit/<?= $ch->id ?>" class="btn btn-outline-info btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <?php if ((int)$ch->is_show === 1): ?>
+                                    <a href="/admin/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-warning btn-sm" title="Unpublish"><i class="bi bi-eye-slash"></i></a>
+                                <?php else: ?>
+                                    <a href="/admin/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish"><i class="bi bi-eye"></i></a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

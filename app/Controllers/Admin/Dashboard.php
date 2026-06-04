@@ -19,7 +19,7 @@ class Dashboard extends BaseController
             'totalAuthor'    => $this->db->table('author')->countAllResults(),
             'latestManga'    => $this->db->table('manga')->orderBy('id', 'DESC')->limit(10)->get()->getResult(),
             'latestComments' => $this->db->query('SELECT c.*, u.username FROM comments c LEFT JOIN users u ON u.id = c.user_id ORDER BY c.id DESC LIMIT 10')->getResult(),
-            'latestChapters' => $this->db->query('SELECT ch.*, m.name as manga_name, m.slug as manga_slug FROM chapter ch LEFT JOIN manga m ON m.id = ch.manga_id ORDER BY ch.created_at DESC LIMIT 15')->getResult(),
+            'latestChapters' => $this->db->query('SELECT ch.*, m.name as manga_name, m.slug as manga_slug FROM chapter ch LEFT JOIN manga m ON m.id = ch.manga_id ORDER BY ch.created_at DESC LIMIT 50')->getResult(),
         ];
 
         return view('admin/dashboard', $data);
