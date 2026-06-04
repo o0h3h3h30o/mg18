@@ -83,7 +83,7 @@
                         <td>
                             <a href="/admin/pages/<?= $ch->id ?>" class="btn btn-outline-info btn-sm" title="Manage Images">Pages</a>
                             <a href="/admin/chapters/edit/<?= $ch->id ?>" class="btn btn-outline-primary btn-sm">Edit</a>
-                            <a href="/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish">Publish</a>
+                            <a href="/admin/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish">Publish</a>
                             <form action="/admin/chapters/delete/<?= $ch->id ?>" method="post" class="d-inline" onsubmit="return confirm('Delete?')">
                                 <?= csrf_field() ?>
                                 <button class="btn btn-outline-danger btn-sm">Del</button>

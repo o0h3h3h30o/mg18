@@ -102,7 +102,7 @@
                             <td>
                                 <a href="/admin/pages/<?= $ch->id ?>" class="btn btn-outline-primary btn-sm" title="View Pages"><i class="bi bi-images"></i></a>
                                 <a href="/admin/chapters/edit/<?= $ch->id ?>" class="btn btn-outline-info btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
-                                <a href="/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish"><i class="bi bi-eye"></i></a>
+                                <a href="/admin/updatePublishChapter?chapter_id=<?= $ch->id ?>" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm" title="Publish"><i class="bi bi-eye"></i></a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
