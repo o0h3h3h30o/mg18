@@ -2074,7 +2074,12 @@ class Crawl extends \CodeIgniter\Controller
         file_put_contents($tmpFile, $imageData);
 
         $origTmp = $tmpFile;
-        $tmpFile = convert_avif_to_jpeg($tmpFile);
+        // Normalize to JPEG so CI4 GDHandler can always handle it
+        // (covers avif/webp/png/gif from CDNs like mangadistrict).
+        $tmpFile = normalize_image_to_jpeg($tmpFile);
+        if ($tmpFile === '') {
+            $tmpFile = convert_avif_to_jpeg($origTmp); // last-ditch fallback
+        }
         $mime = @mime_content_type($tmpFile);
         echo "  Cover: {$imageUrl}\n";
         echo "  Mime after convert: {$mime} (changed: " . ($tmpFile !== $origTmp ? 'yes' : 'no') . ")\n";

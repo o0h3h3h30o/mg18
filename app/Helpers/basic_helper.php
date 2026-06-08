@@ -140,3 +140,70 @@ if (!function_exists('convert_avif_to_jpeg')) {
         return $filePath;
     }
 }
+
+if (!function_exists('normalize_image_to_jpeg')) {
+    /**
+     * Force-convert any GD-readable image (avif/webp/png/gif/jpg) to JPEG
+     * so the CI4 Image service (GDHandler) can handle it.
+     *
+     * Returns the JPEG path on success, empty string on failure
+     * (caller should fall back to convert_avif_to_jpeg or skip).
+     */
+    function normalize_image_to_jpeg(string $filePath): string
+    {
+        $mime = @mime_content_type($filePath);
+        // Already JPEG → just ensure .jpg extension so getimagesize works.
+        if ($mime === 'image/jpeg') {
+            if (pathinfo($filePath, PATHINFO_EXTENSION) !== 'jpg') {
+                $jpg = $filePath . '.jpg';
+                @rename($filePath, $jpg);
+                return file_exists($jpg) ? $jpg : $filePath;
+            }
+            return $filePath;
+        }
+
+        $jpegPath = $filePath . '.jpg';
+
+        // 1) Pure-GD path: imagecreatefromstring handles whatever GD was built with.
+        $bin = @file_get_contents($filePath);
+        if ($bin !== false) {
+            $img = @imagecreatefromstring($bin);
+            if ($img) {
+                // Flatten alpha to white background (avoids black backgrounds when
+                // converting PNG/WebP transparency to JPEG).
+                $w = imagesx($img); $h = imagesy($img);
+                $flat = imagecreatetruecolor($w, $h);
+                $white = imagecolorallocate($flat, 255, 255, 255);
+                imagefilledrectangle($flat, 0, 0, $w, $h, $white);
+                imagecopy($flat, $img, 0, 0, 0, 0, $w, $h);
+                imagejpeg($flat, $jpegPath, 90);
+                imagedestroy($img);
+                imagedestroy($flat);
+                if (file_exists($jpegPath) && filesize($jpegPath) > 0) {
+                    @unlink($filePath);
+                    return $jpegPath;
+                }
+            }
+        }
+
+        // 2) Imagick fallback
+        if (class_exists('Imagick')) {
+            try {
+                $im = new \Imagick($filePath . '[0]');
+                $im->setImageBackgroundColor('white');
+                $im = $im->flattenImages();
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(90);
+                $im->writeImage($jpegPath);
+                $im->destroy();
+                if (file_exists($jpegPath) && filesize($jpegPath) > 0) {
+                    @unlink($filePath);
+                    return $jpegPath;
+                }
+            } catch (\Exception $e) {}
+        }
+
+        log_message('error', "normalize_image_to_jpeg failed for {$filePath} (mime={$mime})");
+        return '';
+    }
+}
