@@ -187,7 +187,7 @@ class Crawl extends \CodeIgniter\Controller
             // Prepare directory
             $chapterDir = $this->savePath . $manga->slug . '/chapters/' . $item->slug . '/';
             @mkdir($chapterDir, 0755, true);
-            if (function_exists('chown')) { @chown($chapterDir, 'www'); @chgrp($chapterDir, 'www'); }
+            if (function_exists('chown') && function_exists('chgrp')) { @chown($chapterDir, 'www'); @chgrp($chapterDir, 'www'); }
 
             $savedPaths = [];
             foreach ($pages as $page) {
@@ -1849,7 +1849,7 @@ class Crawl extends \CodeIgniter\Controller
         // Ensure directory exists with proper permissions
         if (!is_dir($savePath)) {
             @mkdir($savePath, 0755, true);
-            if (function_exists('chown')) { @chown($savePath, 'www'); @chgrp($savePath, 'www'); }
+            if (function_exists('chown') && function_exists('chgrp')) { @chown($savePath, 'www'); @chgrp($savePath, 'www'); }
         }
 
         $filePath = $savePath . $filename;
@@ -2086,7 +2086,7 @@ class Crawl extends \CodeIgniter\Controller
     {
         $coverDir = $this->savePath . $slug . '/cover/';
         @mkdir($coverDir, 0755, true);
-        if (function_exists('chown')) { @chown($coverDir, 'www'); @chgrp($coverDir, 'www'); }
+        if (function_exists('chown') && function_exists('chgrp')) { @chown($coverDir, 'www'); @chgrp($coverDir, 'www'); }
 
         $imageData = $this->fetchImageData($imageUrl, $referer);
         if (!$imageData) {
