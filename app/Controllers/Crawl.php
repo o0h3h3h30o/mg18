@@ -257,6 +257,11 @@ class Crawl extends \CodeIgniter\Controller
         ini_set('memory_limit', '-1');
         ini_set('max_execution_time', '0');
 
+        // DEBUG: surface all errors/warnings for this handler only
+        ini_set('display_errors', '1');
+        ini_set('display_startup_errors', '1');
+        error_reporting(E_ALL);
+
         $sourceUrl = trim($this->request->getGet('url') ?? '');
 
         // Auto-dispatch to manhwaread handler when URL belongs there
@@ -272,6 +277,8 @@ class Crawl extends \CodeIgniter\Controller
 
         echo "=== MangaDistrict Crawl ===\n";
         echo "URL: {$sourceUrl}\n\n";
+
+        try {
 
         // Fetch page
         $html = $this->fetchUrl($sourceUrl, 'https://mangadistrict.com');
@@ -323,6 +330,12 @@ class Crawl extends \CodeIgniter\Controller
                 'updated_at'     => date('Y-m-d H:i:s'),
             ]);
             echo "=> Updated existing manga #{$mangaId} - {$existingManga->name}\n\n";
+
+            // DEBUG: force re-download cover with ?cover=1 to reproduce the bug
+            if ($this->request->getGet('cover') && $data['image']) {
+                echo "=> [DEBUG] Forcing cover re-download...\n";
+                $this->downloadCoverFrom($slug, $data['image'], 'https://mangadistrict.com/', true);
+            }
         } else {
             // Create new manga
             $slug = $this->slugify($data['name']);
@@ -348,9 +361,9 @@ class Crawl extends \CodeIgniter\Controller
             ]);
             $mangaId = $this->db->insertID();
 
-            // Download cover with mangadistrict referer
+            // Download cover with mangadistrict referer (debug mode ON)
             if ($data['image']) {
-                $this->downloadCoverFrom($slug, $data['image'], 'https://mangadistrict.com/');
+                $this->downloadCoverFrom($slug, $data['image'], 'https://mangadistrict.com/', true);
             }
 
             // Insert categories
@@ -411,6 +424,14 @@ class Crawl extends \CodeIgniter\Controller
         echo "\n=== Done ===\n";
         echo "Inserted: {$inserted} | Skipped (exists): {$skipped}\n";
         echo "Next: Run /crawl/crawlChapter to download images.\n";
+
+        } catch (\Throwable $e) {
+            // DEBUG: dump full error to the page instead of a generic 500
+            echo "\n=== EXCEPTION ===\n";
+            echo get_class($e) . ": " . $e->getMessage() . "\n";
+            echo "At: " . $e->getFile() . ":" . $e->getLine() . "\n\n";
+            echo "Trace:\n" . $e->getTraceAsString() . "\n";
+        }
     }
 
     /**
@@ -2061,14 +2082,17 @@ class Crawl extends \CodeIgniter\Controller
     /**
      * Download and save cover image with thumbnails
      */
-    private function downloadCoverFrom(string $slug, string $imageUrl, string $referer = 'https://manga18fx.com/'): void
+    private function downloadCoverFrom(string $slug, string $imageUrl, string $referer = 'https://manga18fx.com/', bool $debug = false): void
     {
         $coverDir = $this->savePath . $slug . '/cover/';
         @mkdir($coverDir, 0755, true);
         if (function_exists('chown')) { @chown($coverDir, 'www'); @chgrp($coverDir, 'www'); }
 
         $imageData = $this->fetchImageData($imageUrl, $referer);
-        if (!$imageData) return;
+        if (!$imageData) {
+            if ($debug) echo "  [DEBUG] fetchImageData returned empty for: {$imageUrl}\n";
+            return;
+        }
 
         $tmpFile = tempnam(sys_get_temp_dir(), 'cover_');
         file_put_contents($tmpFile, $imageData);
@@ -2084,14 +2108,28 @@ class Crawl extends \CodeIgniter\Controller
         echo "  Cover: {$imageUrl}\n";
         echo "  Mime after convert: {$mime} (changed: " . ($tmpFile !== $origTmp ? 'yes' : 'no') . ")\n";
 
+        if ($debug) {
+            echo "  [DEBUG] tmpFile: {$tmpFile} (" . (is_file($tmpFile) ? filesize($tmpFile) . ' bytes' : 'MISSING') . ")\n";
+            echo "  [DEBUG] coverDir: {$coverDir} (writable: " . (is_writable($coverDir) ? 'yes' : 'no') . ")\n";
+            echo "  [DEBUG] GD avif: " . (function_exists('imagecreatefromavif') ? 'yes' : 'no')
+               . " | GD webp: " . (function_exists('imagecreatefromwebp') ? 'yes' : 'no')
+               . " | Imagick: " . (class_exists('Imagick') ? 'yes' : 'no') . "\n";
+            $info = @getimagesize($tmpFile);
+            echo "  [DEBUG] getimagesize: " . ($info ? "{$info[0]}x{$info[1]} {$info['mime']}" : 'FAILED (not a valid image GD can read)') . "\n";
+        }
+
         try {
             $imgService = \Config\Services::image();
             $imgService->withFile($tmpFile)->resize(250, 350, true, 'height')->save($coverDir . 'cover_250x350.jpg', 90);
             $imgService->withFile($coverDir . 'cover_250x350.jpg')->resize(150, 210, true, 'height')->save($coverDir . 'cover_thumb.jpg', 85);
             $imgService->withFile($coverDir . 'cover_250x350.jpg')->resize(100, 140, true, 'height')->save($coverDir . 'cover_thumb_2.webp', 85);
             echo "  Cover saved OK\n";
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             echo "  Cover resize error: {$e->getMessage()}\n";
+            if ($debug) {
+                echo "  [DEBUG] " . get_class($e) . " @ {$e->getFile()}:{$e->getLine()}\n";
+                echo "  [DEBUG] Trace:\n{$e->getTraceAsString()}\n";
+            }
         }
 
         @unlink($tmpFile);
