@@ -212,7 +212,7 @@ class Crawl extends \CodeIgniter\Controller
             }
 
             // Apply banner to first/last actual saved page (preserves crawl order)
-            // $this->applyBannerToFiles($savedPaths);
+            $this->applyBannerToFiles($savedPaths);
 
             // Done
             $this->db->table('chapter')->where('id', $item->id)->update([
@@ -1009,7 +1009,7 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         // Apply banner to first/last actual saved page
-        // $this->applyBannerToFiles($savedPaths);
+        $this->applyBannerToFiles($savedPaths);
 
         $this->db->table('chapter')->where('id', $chapter->id)->update([
             'is_crawling' => 0,
@@ -1092,7 +1092,7 @@ class Crawl extends \CodeIgniter\Controller
             $index++;
         }
 
-        // $this->applyBannerToFiles($savedPaths);
+        $this->applyBannerToFiles($savedPaths);
 
         $this->db->table('chapter')->where('id', $chapter->id)->update([
             'is_crawling' => 0,
@@ -1235,7 +1235,7 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         // Apply banner to first/last actual saved page (preserves crawl order)
-        // $this->applyBannerToFiles($savedPaths);
+        $this->applyBannerToFiles($savedPaths);
 
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([
@@ -1331,7 +1331,7 @@ class Crawl extends \CodeIgniter\Controller
         }
 
         // Apply banner to first/last actual saved page (preserves crawl order)
-        // $this->applyBannerToFiles($savedPaths);
+        $this->applyBannerToFiles($savedPaths);
 
         // Mark as done
         $this->db->table('chapter')->where('id', $chapter->id)->update([
