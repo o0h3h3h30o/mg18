@@ -227,6 +227,68 @@ class Crawl extends \CodeIgniter\Controller
     }
 
     /**
+     * Scan the 50 most recent chapters and re-download any pages still
+     * marked external=1 (the original download likely failed earlier).
+     *
+     * Unlike crawlChapter2 this doesn't touch is_show / is_crawling state
+     * and skips the banner step (it was applied on the initial crawl).
+     */
+    public function recheckExternalPages()
+    {
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', '0');
+
+        $chapters = $this->db->table('chapter')
+            ->orderBy('id', 'DESC')
+            ->limit(50)
+            ->get()->getResult();
+
+        $totalFixed = 0;
+        $totalFailed = 0;
+
+        foreach ($chapters as $item) {
+            $pages = $this->db->table('page')
+                ->where('chapter_id', $item->id)
+                ->where('external', 1)
+                ->get()->getResult();
+            if (empty($pages)) continue;
+
+            $manga = $this->db->table('manga')->where('id', $item->manga_id)->get()->getRow();
+            if (!$manga) continue;
+
+            $chapterDir = $this->savePath . $manga->slug . '/chapters/' . $item->slug . '/';
+            @mkdir($chapterDir, 0755, true);
+            if (function_exists('chown') && function_exists('chgrp')) { @chown($chapterDir, 'www'); @chgrp($chapterDir, 'www'); }
+
+            echo "Chapter {$item->id} ({$manga->name} - {$item->name}): " . count($pages) . " external page(s)\n";
+
+            foreach ($pages as $page) {
+                $imageUrl = $page->image;
+                $ext = $this->getImageExtension($imageUrl);
+                $pageName = str_pad($page->slug, 3, '0', STR_PAD_LEFT) . '.' . $ext;
+
+                $referer = $this->resolveImageReferer($imageUrl, $item->source_url ?? '');
+                $rawdata = $this->fetchImageData($imageUrl, $referer);
+
+                if ($rawdata) {
+                    $finalName = $this->saveAndOptimizeImage($rawdata, $chapterDir, $pageName);
+                    $this->db->table('page')->where('id', $page->id)->update([
+                        'image'    => $finalName,
+                        'external' => 0,
+                    ]);
+                    $totalFixed++;
+                    echo "  OK: page {$page->slug} -> {$finalName}\n";
+                } else {
+                    $totalFailed++;
+                    echo "  FAIL: page {$page->slug} ({$imageUrl})\n";
+                }
+            }
+        }
+
+        echo "\nDone. Fixed: {$totalFixed} | Failed: {$totalFailed}\n";
+    }
+
+    /**
      * Reset views: day (always) + month (if 1st of month)
      */
     public function resetView()
