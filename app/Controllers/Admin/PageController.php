@@ -127,7 +127,10 @@ class PageController extends BaseController
         $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
         $images = [];
         $this->findImages($tmpDir . '/extracted', $allowedExts, $images);
-        sort($images); // Sort by filename
+        // Natural sort so 1,2,...,9,10,11 stays in numeric order
+        // (default sort() is ASCII: 1,10,11,2,3,...)
+        natsort($images);
+        $images = array_values($images);
 
         if (empty($images)) {
             $this->cleanDir($tmpDir);
