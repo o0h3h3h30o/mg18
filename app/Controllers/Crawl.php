@@ -2104,19 +2104,38 @@ class Crawl extends \CodeIgniter\Controller
         return 'https://manga18fx.com/';
     }
 
+    /**
+     * Normalize an image URL for cURL: parse, re-encode each path segment
+     * (decode → rawurlencode) so raw non-ASCII, spaces, `!`, `#`, `&` all get
+     * escaped, and already-encoded `%XX` don't get double-encoded.
+     */
+    private function normalizeImageUrl(string $url): string
+    {
+        $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['host'])) return $url;
+
+        $out = ($parts['scheme'] ?? 'https') . '://' . $parts['host'];
+        if (isset($parts['port'])) $out .= ':' . $parts['port'];
+
+        if (isset($parts['path'])) {
+            $out .= implode('/', array_map(
+                static fn($s) => rawurlencode(rawurldecode($s)),
+                explode('/', $parts['path'])
+            ));
+        }
+        if (isset($parts['query']))    $out .= '?' . $parts['query'];
+        if (isset($parts['fragment'])) $out .= '#' . $parts['fragment'];
+        return $out;
+    }
+
     private function fetchImageData(string $url, string $referer = ''): string
     {
         $proxy = $this->getRandomProxy();
 
-        // Normalize URL: decode HTML entities (&#039; etc.) then percent-encode
-        // bytes that aren't safe in an HTTP request line — non-ASCII (Korean,
-        // Japanese, Vietnamese...), SPACE, apostrophe and double-quote.
-        $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        $url = preg_replace_callback(
-            '/[\x80-\xff\x20\x22\x27]/',
-            static fn($m) => rawurlencode($m[0]),
-            $url
-        );
+        // Normalize URL so mixed raw/encoded paths (e.g. Korean chars + %20 + !)
+        // become a valid HTTP request line.
+        $url = $this->normalizeImageUrl($url);
 
         $ch = curl_init($url);
         if ($proxy) {
