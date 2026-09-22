@@ -1349,10 +1349,12 @@ class Crawl extends \CodeIgniter\Controller
         $successCount = 0;
         $savedPaths = [];
         $skippedFirstHeader = false;
+        $seen = []; // dedupe: mangadistrict emits <img data-src=X> + <noscript><img src=X></noscript>
 
         foreach ($imgDoms as $imgDom) {
             $src = trim($imgDom->getAttribute('data-src') ?: $imgDom->getAttribute('src') ?: '');
-            if (!$src || str_contains($src, 'logo') || str_contains($src, 'icon')) continue;
+            if (!$src || str_starts_with($src, 'data:')) continue;
+            if (str_contains($src, 'logo') || str_contains($src, 'icon')) continue;
 
             // MangaDistrict: skip the very first image (site header/disclaimer)
             if (!$skippedFirstHeader) {
@@ -1360,6 +1362,10 @@ class Crawl extends \CodeIgniter\Controller
                 echo "  Skipped first image (mangadistrict header): " . substr($src, 0, 80) . "...\n";
                 continue;
             }
+
+            // Skip if we already downloaded this exact URL (noscript fallback)
+            if (isset($seen[$src])) continue;
+            $seen[$src] = true;
 
             $ext = $this->getImageExtension($src);
             $pageName = str_pad($index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
